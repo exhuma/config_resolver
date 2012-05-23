@@ -11,6 +11,7 @@ setup(
     name=NAME,
     version=VERSION,
     description=DESCRIPTION,
+    url='https://github.com/exhuma/config_resolver',
     long_description=open("README.rst").read(),
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
