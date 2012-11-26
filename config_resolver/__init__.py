@@ -15,10 +15,11 @@ from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
 
-__version__ = '1.1'
+__version__ = '2.0'
 
 LOG = logging.getLogger(__name__)
-CONF = None
+CONF = SafeConfigParser()
+CONFIG_LOADED = False
 
 
 def config(group, app, search_path=None, conf_name=None, force_reload=False):
@@ -34,7 +35,10 @@ def config(group, app, search_path=None, conf_name=None, force_reload=False):
     :param search_path: if specified, set the config search path to the given
         value. The path can use OS specific separators (f.ex.: ``:`` on posix,
         ``;`` on windows) to specify multiple folders. These folders will be
-        searched in the specified order. The first file found is parsed.
+        searched in the specified order. The config files will be loaded
+        incrementally. This means that the each subsequent config file will
+        extend/override existing values. This means that the last file will
+        take precedence.
     :param conf_name: if specified, this can be used to override the
         configuration filename (default=``"app.ini"``)
     :param force_reload: if set to true, the config is reloaded, even if it
@@ -48,24 +52,27 @@ def config(group, app, search_path=None, conf_name=None, force_reload=False):
 
     <app>_PATH
         The search path of config files. ``<app>`` is the application name in
-        all caps.
+        all caps. See the documentation for the ``search_path`` parameter for
+        an explanation of precedence.
 
     <app>_CONFIG
         The file name of the config file (default=``"app.ini"``)
     """
-    global CONF
+    global CONFIG_LOADED
 
     # only load the config if necessary (or explicitly requested)
-    if CONF and not force_reload:
+    if CONFIG_LOADED and not force_reload:
+        LOG.debug('Returning cached config instance. Use '
+                '``force_reload=True`` to avoid caching!')
         return CONF
 
     path_var = "%s_PATH" % app.upper()
     filename_var = "%s_CONFIG" % app.upper()
 
     # default search path
-    path = [getcwd(),
+    path = ['/etc/%s/%s' % (group, app),
             expanduser('~/.%s/%s' % (group, app)),
-            '/etc/%s/%s' % (group, app)]
+            getcwd(),]
 
     # if an environment variable was specified, override the default path
     env_path = getenv(path_var)
@@ -84,23 +91,22 @@ def config(group, app, search_path=None, conf_name=None, force_reload=False):
     if conf_name:
         config_filename = conf_name
 
-    # Next, use the resolved path to find the filenames
-    detected_conf = None
-    for dir in path:
-        conf_name = join(dir, config_filename)
+    # Next, use the resolved path to find the filenames. Keep track of which
+    # files we loaded in order to inform the user.
+    CONFIG_LOADED = False
+    for dirname in path:
+        conf_name = join(dirname, config_filename)
         if exists(conf_name):
-            detected_conf = conf_name
-            break
+            CONF.read(conf_name)
+            LOG.info('{0} config from {1}'.format(
+                CONFIG_LOADED and 'Updating' or 'Loading initial',
+                conf_name))
+            CONFIG_LOADED = True
+        else:
+            LOG.debug('{0} does not exist. Skipping...'.format(conf_name))
 
-    parser = SafeConfigParser()
-    detected_conf, path = detected_conf, path
-    if not detected_conf:
+    if not CONFIG_LOADED:
         LOG.warning("No config file named %s found! Search path was %r" % (
             config_filename, path))
-        return None
 
-    parser.read(detected_conf)
-    LOG.info("Loaded settings from %r" % detected_conf)
-
-    CONF = parser
     return CONF

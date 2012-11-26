@@ -16,5 +16,6 @@ setup(
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
     license="LGPL",
+    url='https://github.com/exhuma/config_resolver',
     packages=find_packages(exclude=["tests.*", "tests"]),
 )
