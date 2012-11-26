@@ -17,6 +17,5 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="LGPL",
     include_package_data=True,
-    url='https://github.com/exhuma/config_resolver',
-    packages=['config_resolver'],
+    py_modules=['config_resolver'],
 )
