@@ -15,7 +15,7 @@ from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
 
-__version__ = '2.0'
+__version__ = '2.0.1'
 
 LOG = logging.getLogger(__name__)
 CONF = SafeConfigParser()
