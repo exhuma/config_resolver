@@ -21,24 +21,24 @@ LOG = logging.getLogger(__name__)
 
 
 class Config(object):
+    """
+    Environment Variables
+    ---------------------
 
-    def __init__(self, group_name, app_name):
-        self.config = None
-        self.load(group_name, app_name)
+    The resolver can also be manipulated using environment variables to
+    allow different values for different running instances:
 
-    def load(self, group_name, app_name, search_path=None,
-            file_name=None, reload=False):
+    <app_name>_PATH
+        The search path of config files. ``<app_name>`` is the application
+        name in all caps. See the documentation for the ``search_path``
+        parameter for an explanation of precedence.
+
+    <app_name>_CONFIG
+        The file name of the config file (default=``"app.ini"``)
+    """
+
+    def __init__(self, group_name, app_name, search_path=None, file_name=None):
         """
-        Searches for an appropriate config file. If found, loads the file into
-        the current :py:class:`Config` instance. This method can also be used
-        to re-load a configuration. Note that you may want to set ``reload``
-        to ``True`` to clear the configuration before loading in that case.
-        Without doing that, values will remain available even if they have
-        been removed from the config files.
-
-        :param group_name: an application group (f. ex.: your company name)
-        :param app_name: an application identifier (f.ex.: the application
-                         module name)
         :param search_path: if specified, set the config search path to the
             given value. The path can use OS specific separators (f.ex.: ``:``
             on posix, ``;`` on windows) to specify multiple folders. These
@@ -48,22 +48,28 @@ class Config(object):
             the last file will take precedence.
         :param file_name: if specified, this can be used to override the
             configuration filename (default=``"app.ini"``)
+        :param group_name: an application group (f. ex.: your company name)
+        :param app_name: an application identifier (f.ex.: the application
+                         module name)
+        """
+        self.config = None
+        self.group_name = group_name
+        self.app_name = app_name
+        self.search_path = search_path
+        self.file_name = file_name
+        self.load()
+
+    def load(self, reload=False):
+        """
+        Searches for an appropriate config file. If found, loads the file into
+        the current instance. This method can also be used to re-load a
+        configuration. Note that you may want to set ``reload`` to ``True`` to
+        clear the configuration before loading in that case.  Without doing
+        that, values will remain available even if they have been removed from
+        the config files.
+
         :param reload: if set to ``True``, the existing values are cleared
                        before reloading.
-
-        Environment Variables
-        ---------------------
-
-        The resolver can also be manipulated using environment variables to
-        allow different values for different running instances:
-
-        <app_name>_PATH
-            The search path of config files. ``<app_name>`` is the application
-            name in all caps. See the documentation for the ``search_path``
-            parameter for an explanation of precedence.
-
-        <app_name>_CONFIG
-            The file name of the config file (default=``"app.ini"``)
         """
 
         if reload:
@@ -75,17 +81,17 @@ class Config(object):
                     '``reload=True`` to avoid caching!')
             return self.config
 
-        path_var = "%s_PATH" % app_name.upper()
-        filename_var = "%s_CONFIG" % app_name.upper()
+        path_var = "%s_PATH" % self.app_name.upper()
+        filename_var = "%s_CONFIG" % self.app_name.upper()
 
         # default search path
-        path = ['/etc/%s/%s' % (group_name, app_name),
-                expanduser('~/.%s/%s' % (group_name, app_name)),
+        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
+                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
                 getcwd()]
 
         # If a path was passed directly to this method, override the path.
-        if search_path:
-            path = search_path.split(pathsep)
+        if self.search_path:
+            path = self.search_path.split(pathsep)
 
         # if an environment variable was specified, override the path again.
         # Environment variables take absolute precedence.
@@ -97,8 +103,8 @@ class Config(object):
 
         # same logic for the configuration filename. First, check the method
         # argument...
-        if file_name:
-            config_filename = file_name
+        if self.file_name:
+            config_filename = self.file_name
         else:
             config_filename = None
 
