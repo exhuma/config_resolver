@@ -20,7 +20,7 @@ __version__ = '3.0'
 LOG = logging.getLogger(__name__)
 
 
-class Config(object):
+class Config(object, SafeConfigParser):
     """
     :param search_path: if specified, set the config search path to the
         given value. The path can use OS specific separators (f.ex.: ``:``
@@ -50,12 +50,15 @@ class Config(object):
         The file name of the config file (default=``"app.ini"``)
     """
 
-    def __init__(self, group_name, app_name, search_path=None, file_name=None):
+    def __init__(self, group_name, app_name, search_path=None,
+            file_name='app.ini', **kwargs):
+        SafeConfigParser.__init__(self, **kwargs)
         self.config = None
         self.group_name = group_name
         self.app_name = app_name
         self.search_path = search_path
         self.file_name = file_name
+        self.loaded = False
         self.load()
 
     def load(self, reload=False):
@@ -100,12 +103,11 @@ class Config(object):
                      'environment vaiable.'.format(env_path))
             path = env_path.split(pathsep)
 
-        # same logic for the configuration filename. First, check the method
-        # argument...
+        # same logic for the configuration filename. First, check if we were
+        # initialized with a filename...
+        config_filename = None
         if self.file_name:
             config_filename = self.file_name
-        else:
-            config_filename = None
 
         # ... next, take the value from the environment
         env_filename = getenv(filename_var)
@@ -116,20 +118,17 @@ class Config(object):
 
         # Next, use the resolved path to find the filenames. Keep track of
         # which files we loaded in order to inform the user.
-        conf = SafeConfigParser()
         for dirname in path:
             conf_name = join(dirname, config_filename)
             if exists(conf_name):
-                conf.read(conf_name)
+                self.read(conf_name)
                 LOG.info('%s config from %s' % (
-                    self.config and 'Updating' or 'Loading initial',
+                    self.loaded and 'Updating' or 'Loading initial',
                     conf_name))
-                self.config = conf
+                self.loaded = True
             else:
                 LOG.debug('%s does not exist. Skipping...' % (conf_name, ))
 
-        if not self.conf:
+        if not self.loaded:
             LOG.warning("No config file named %s found! Search path was %r" % (
                 config_filename, path))
-
-        return conf
