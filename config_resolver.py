@@ -6,6 +6,16 @@ Usage::
     from config_resolver import config
     conf = config('mycompany', 'myapplication')
 
+Crating the config object will not raise an error. Instead it will return a
+valid, but empty :py:class:`.Config` instance. In order to determine whether
+any config file was loaded, you can look into the ``loaded_files`` instance
+variable. It contains a list of all the loaded files, in the order of loading.
+If that list is empty, no config has been found.
+
+Additionally, another instance variable named ``active_path`` represents the
+search path after processing of environment variables and runtime parameters.
+This may be useful to display user-errors, or debugging.
+
 The resolver parses config files according to the default python
 ``ConfigParser`` (i.e. ``ini`` files).
 """
@@ -58,7 +68,8 @@ class Config(object, SafeConfigParser):
         self.app_name = app_name
         self.search_path = search_path
         self.file_name = file_name
-        self.loaded = False
+        self.loaded_files = []
+        self.active_path = []
         self.load()
 
     def load(self, reload=False):
@@ -118,17 +129,18 @@ class Config(object, SafeConfigParser):
 
         # Next, use the resolved path to find the filenames. Keep track of
         # which files we loaded in order to inform the user.
+        self.active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
             if exists(conf_name):
                 self.read(conf_name)
                 LOG.info('%s config from %s' % (
-                    self.loaded and 'Updating' or 'Loading initial',
+                    self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
-                self.loaded = True
+                self.loaded_files.append(conf_name)
             else:
                 LOG.debug('%s does not exist. Skipping...' % (conf_name, ))
 
-        if not self.loaded:
+        if not self.loaded_files:
             LOG.warning("No config file named %s found! Search path was %r" % (
                 config_filename, path))
