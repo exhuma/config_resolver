@@ -39,7 +39,7 @@ class Config(object, SafeConfigParser):
         will be loaded incrementally. This means that the each subsequent
         config file will extend/override existing values. This means that
         the last file will take precedence.
-    :param file_name: if specified, this can be used to override the
+    :param filename: if specified, this can be used to override the
         configuration filename (default=``"app.ini"``)
     :param group_name: an application group (f. ex.: your company name)
     :param app_name: an application identifier (f.ex.: the application
@@ -61,13 +61,13 @@ class Config(object, SafeConfigParser):
     """
 
     def __init__(self, group_name, app_name, search_path=None,
-            file_name='app.ini', **kwargs):
+            filename='app.ini', **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
         self.config = None
         self.group_name = group_name
         self.app_name = app_name
         self.search_path = search_path
-        self.file_name = file_name
+        self.filename = filename
         self.loaded_files = []
         self.active_path = []
         self.load()
@@ -117,8 +117,8 @@ class Config(object, SafeConfigParser):
         # same logic for the configuration filename. First, check if we were
         # initialized with a filename...
         config_filename = None
-        if self.file_name:
-            config_filename = self.file_name
+        if self.filename:
+            config_filename = self.filename
 
         # ... next, take the value from the environment
         env_filename = getenv(filename_var)
