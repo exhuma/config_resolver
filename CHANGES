@@ -1,0 +1,13 @@
+Release 3.1
+-----------
+
+Features added
+~~~~~~~~~~~~~~
+
+* It is now possible to extend the search path by prefixing the
+  ``<APP_NAME>_PATH`` variable value with a ``+``
+
+* Changelog added
+
+
+.. vim: set ft=rst :
