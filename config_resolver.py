@@ -3,8 +3,8 @@ A config resolver for python.
 
 Usage::
 
-    from config_resolver import config
-    conf = config('mycompany', 'myapplication')
+    from config_resolver import Config
+    conf = Config('mycompany', 'myapplication')
 
 Crating the config object will not raise an error. Instead it will return a
 valid, but empty :py:class:`.Config` instance. In order to determine whether
@@ -25,7 +25,7 @@ from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
 
-__version__ = '3.0'
+__version__ = '3.1'
 
 LOG = logging.getLogger(__name__)
 
@@ -55,6 +55,10 @@ class Config(object, SafeConfigParser):
         The search path of config files. ``<app_name>`` is the application
         name in all caps. See the documentation for the ``search_path``
         parameter for an explanation of precedence.
+
+        If the path is prefixed with ``+``, then the path is *appended* to the
+        default search path. This is the recommended way to specify the path,
+        as it will not short-circuit the existing lookup logic.
 
     <app_name>_CONFIG
         The file name of the config file (default=``"app.ini"``)
@@ -109,7 +113,12 @@ class Config(object, SafeConfigParser):
         # if an environment variable was specified, override the path again.
         # Environment variables take absolute precedence.
         env_path = getenv(path_var)
-        if env_path:
+        if env_path and env_path.startswith('+'):
+            additional_paths = env_path[1:].split(pathsep)
+            LOG.info('Search path extended with with {0} by an environment '
+                     'vaiable.'.format(additional_paths))
+            path.extend(additional_paths)
+        elif env_path:
             LOG.info('Configuration search path was overridden with {0} by an '
                      'environment vaiable.'.format(env_path))
             path = env_path.split(pathsep)
