@@ -15,7 +15,7 @@ from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
 
-__version__ = '2.1'
+__version__ = '2.1.1'
 
 LOG = logging.getLogger(__name__)
 __CONFIGURATIONS = {}
@@ -61,8 +61,13 @@ def config(group, app, search_path=None, conf_name=None, force_reload=False):
 
     groupdict = __CONFIGURATIONS.setdefault(group, {})
 
-    # only load the config if necessary (or explicitly requested)
-    if app in groupdict and not force_reload:
+    # if force_reload is specified, throw any old configuration out
+    if force_reload and app in groupdict:
+        LOG.debug('Removing existing config. This should trigger a reload.')
+        groupdict.pop(app)
+
+    # only load the config if necessary
+    if app in groupdict:
         LOG.debug('Returning cached config instance. Use '
                 '``force_reload=True`` to avoid caching!')
         return groupdict[app]
