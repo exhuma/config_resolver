@@ -96,7 +96,7 @@ class Config(object, SafeConfigParser):
         if self.config:
             LOG.debug('Returning cached config instance. Use '
                     '``reload=True`` to avoid caching!')
-            return self.config
+            return
 
         path_var = "%s_PATH" % self.app_name.upper()
         filename_var = "%s_CONFIG" % self.app_name.upper()
