@@ -20,12 +20,12 @@ The resolver parses config files according to the default python
 ``ConfigParser`` (i.e. ``ini`` files).
 """
 
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
 
-__version__ = '3.1'
+__version__ = '3.2'
 
 LOG = logging.getLogger(__name__)
 
@@ -75,6 +75,31 @@ class Config(object, SafeConfigParser):
         self.loaded_files = []
         self.active_path = []
         self.load()
+
+    def get(self, section, option, default=None):
+        """
+        Overrides :py:meth:`SafeConfigParser.get`.
+
+        In addition to ``section`` and ``option``, this call takes an optional
+        ``default`` value. This behaviour works in *addition* to the
+        SafeConfigParser default mechanism. Note that a default value from
+        SafeConfigParser takes precedence.
+
+        The reason this additional functionality is added, is because the
+        defaults of ``SafeConfigParser`` are not dependent on secions. If you
+        specify a default for the option ``test``, then this value will be
+        returned for both ``section1.test`` and for ``section2.test``. Using
+        the default on the ``get`` call gives you finer control over this.
+
+        Default hits are logged with level ``logging.DEBUG``.
+        """
+        try:
+            value = SafeConfigParser.get(self, section, option)
+            return value
+        except (NoSectionError, NoOptionError) as exc:
+            LOG.debug("{0}: Returning default value {1!r}".format(exc,
+                default))
+            return default
 
     def load(self, reload=False):
         """

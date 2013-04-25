@@ -1,3 +1,13 @@
+Release 3.2
+-----------
+
+Features added
+~~~~~~~~~~~~~~
+
+* The call to ``get`` can now take an optional default value. More details can
+  be found in the docstring.
+
+
 Release 3.1
 -----------
 
