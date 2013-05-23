@@ -65,7 +65,7 @@ class Config(object, SafeConfigParser):
     """
 
     def __init__(self, group_name, app_name, search_path=None,
-            filename='app.ini', **kwargs):
+                 filename='app.ini', **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
         self.config = None
         self.group_name = group_name
@@ -98,7 +98,7 @@ class Config(object, SafeConfigParser):
             return value
         except (NoSectionError, NoOptionError) as exc:
             LOG.debug("{0}: Returning default value {1!r}".format(exc,
-                default))
+                                                                  default))
             return default
 
     def load(self, reload=False):
@@ -120,7 +120,7 @@ class Config(object, SafeConfigParser):
         # only load the config if necessary (or explicitly requested)
         if self.config:
             LOG.debug('Returning cached config instance. Use '
-                    '``reload=True`` to avoid caching!')
+                      '``reload=True`` to avoid caching!')
             return
 
         path_var = "%s_PATH" % self.app_name.upper()
