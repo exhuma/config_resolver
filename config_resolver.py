@@ -24,6 +24,7 @@ from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 from os import getenv, pathsep, getcwd
 from os.path import expanduser, exists, join
 import logging
+from warnings import warn
 
 __version__ = '3.2'
 
@@ -76,6 +77,35 @@ class Config(object, SafeConfigParser):
         self.active_path = []
         self.load()
 
+    def _get_env_filename(self):
+        old_filename_var = "%s_CONFIG" % self.app_name.upper()
+        filename_var = "%s_%s_CONFIG" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+        env_filename = getenv(old_filename_var)
+        if env_filename:
+            warn(DeprecationWarning('No group prefixed in environment '
+                                    'variable! This behaviour is deprecated. '
+                                    'See the docs!'))
+        else:
+            env_filename = getenv(filename_var)
+        return filename_var
+
+    def _get_env_path(self):
+        old_path_var = "%s_PATH" % self.app_name.upper()
+        path_var = "%s_%s_PATH" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+
+        env_path = getenv(old_path_var)
+        if env_path:
+            warn(DeprecationWarning('No group prefixed in environment '
+                                    'variable! This behaviour is deprecated. '
+                                    'See the docs!'))
+        else:
+            env_path = getenv(path_var)
+        return env_path
+
     def get(self, section, option, default=None):
         """
         Overrides :py:meth:`SafeConfigParser.get`.
@@ -123,9 +153,6 @@ class Config(object, SafeConfigParser):
                       '``reload=True`` to avoid caching!')
             return
 
-        path_var = "%s_PATH" % self.app_name.upper()
-        filename_var = "%s_CONFIG" % self.app_name.upper()
-
         # default search path
         path = ['/etc/%s/%s' % (self.group_name, self.app_name),
                 expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
@@ -137,7 +164,8 @@ class Config(object, SafeConfigParser):
 
         # if an environment variable was specified, override the path again.
         # Environment variables take absolute precedence.
-        env_path = getenv(path_var)
+        env_path = self._get_env_path()
+
         if env_path and env_path.startswith('+'):
             additional_paths = env_path[1:].split(pathsep)
             LOG.info('Search path extended with with {0} by an environment '
@@ -155,7 +183,7 @@ class Config(object, SafeConfigParser):
             config_filename = self.filename
 
         # ... next, take the value from the environment
-        env_filename = getenv(filename_var)
+        env_filename = self._get_env_filename()
         if env_filename:
             LOG.info('Configuration filename was overridden with {0} by an '
                      'environment vaiable.'.format(env_filename))
