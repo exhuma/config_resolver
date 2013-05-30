@@ -1,3 +1,13 @@
+Release 3.2.1
+-------------
+
+Fixes/Improvments
+~~~~~~~~~~~~~~~~~
+
+* The "group" name has been prefixed to the names of the environment variables.
+  So, instead of APP_PATH, you can now use GROUP_APP_PATH instead. Not using
+  the GROUP prefix will still work but emit a DeprecationWarning.
+
 Release 3.2
 -----------
 
