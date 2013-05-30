@@ -26,7 +26,7 @@ from os.path import expanduser, exists, join
 import logging
 from warnings import warn
 
-__version__ = '3.2'
+__version__ = '3.2.1'
 
 LOG = logging.getLogger(__name__)
 
