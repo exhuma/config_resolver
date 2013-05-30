@@ -89,7 +89,7 @@ class Config(object, SafeConfigParser):
                                     'See the docs!'))
         else:
             env_filename = getenv(filename_var)
-        return filename_var
+        return env_filename
 
     def _get_env_path(self):
         old_path_var = "%s_PATH" % self.app_name.upper()
