@@ -1,2 +1,4 @@
-env
-*.egg-info
+/*.egg-info
+/app.ini
+/dist
+/env

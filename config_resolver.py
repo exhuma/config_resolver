@@ -83,7 +83,7 @@ class Config(object, SafeConfigParser):
             self.group_name.upper(),
             self.app_name.upper())
         env_filename = getenv(old_filename_var)
-        if env_filename:
+        if env_filename:  # pragma: no cover
             warn(DeprecationWarning('No group prefixed in environment '
                                     'variable! This behaviour is deprecated. '
                                     'See the docs!'))
@@ -98,7 +98,7 @@ class Config(object, SafeConfigParser):
             self.app_name.upper())
 
         env_path = getenv(old_path_var)
-        if env_path:
+        if env_path:  # pragma: no cover
             warn(DeprecationWarning('No group prefixed in environment '
                                     'variable! This behaviour is deprecated. '
                                     'See the docs!'))
@@ -144,11 +144,11 @@ class Config(object, SafeConfigParser):
                        before reloading.
         """
 
-        if reload:
+        if reload:  # pragma: no cover
             self.config = None
 
         # only load the config if necessary (or explicitly requested)
-        if self.config:
+        if self.config:  # pragma: no cover
             LOG.debug('Returning cached config instance. Use '
                       '``reload=True`` to avoid caching!')
             return
