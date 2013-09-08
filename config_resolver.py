@@ -106,7 +106,7 @@ class Config(object, SafeConfigParser):
             env_path = getenv(path_var)
         return env_path
 
-    def get(self, section, option, default=None):
+    def get(self, section, option, default=None, mandatory=False):
         """
         Overrides :py:meth:`SafeConfigParser.get`.
 
@@ -122,7 +122,17 @@ class Config(object, SafeConfigParser):
         the default on the ``get`` call gives you finer control over this.
 
         Default hits are logged with level ``logging.DEBUG``.
+
+        If the optional argument ``mandatory`` is set to ``True``, this method
+        will *always* raise a :py:exc:`ConfigParser.NoOptionError` or a
+        :py:exc:`NoSectionError`, even if defaults have been passed in
+        following the ``SafeConfigParser`` semantics.
         """
+        if mandatory and not self.has_section(section):
+            raise NoSectionError(section)
+        elif mandatory and not self.has_option(section, option):
+            raise NoOptionError(option, section)
+
         try:
             value = SafeConfigParser.get(self, section, option)
             return value
