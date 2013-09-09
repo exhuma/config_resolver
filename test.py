@@ -3,7 +3,7 @@ import os
 from os.path import expanduser
 from ConfigParser import NoOptionError, NoSectionError
 
-from config_resolver import Config
+from config_resolver import Config, SecuredConfig
 
 
 class SimpleInitTest(unittest.TestCase):
@@ -96,6 +96,10 @@ class MandatoryTest(unittest.TestCase):
         with self.assertRaises(NoOptionError):
             self.cfg.get('section1', 'nosuchoption', mandatory=True)
 
+    def test_unsecured_file(self):
+        with self.assertRaises(OSError):
+            SecuredConfig('hello', 'world', filename='test.ini',
+                          search_path='testdata')
 
 if __name__ == '__main__':
     unittest.main()

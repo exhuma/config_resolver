@@ -216,3 +216,15 @@ class Config(object, SafeConfigParser):
         if not self.loaded_files:
             LOG.warning("No config file named %s found! Search path was %r" % (
                 config_filename, path))
+
+
+class SecuredConfig(Config):
+
+    def load(self, *args, **kwargs):
+        """
+        Overrides :py:meth:`Config.load` and will fail if the file is *not*
+        secured. In order for a file to be secured, it must have "600" file
+        permissions.
+        """
+
+        super(SecuredConfig, self).load(*args, **kwargs)
