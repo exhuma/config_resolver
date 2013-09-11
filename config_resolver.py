@@ -21,9 +21,10 @@ The resolver parses config files according to the default python
 """
 
 from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
-from os import getenv, pathsep, getcwd
+from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
+import stat
 from warnings import warn
 
 __version__ = '3.2.1'
@@ -106,6 +107,69 @@ class Config(object, SafeConfigParser):
             env_path = getenv(path_var)
         return env_path
 
+    def _effective_filename(self):
+        """
+        Returns a list of filenames to inspect in reverse order of precedence.
+        In other words: the last filename will override the settings from the
+        first filename.
+        """
+        # same logic for the configuration filename. First, check if we were
+        # initialized with a filename...
+        config_filename = None
+        if self.filename:
+            config_filename = self.filename
+
+        # ... next, take the value from the environment
+        env_filename = self._get_env_filename()
+        if env_filename:
+            LOG.info('Configuration filename was overridden with {0} by an '
+                     'environment vaiable.'.format(env_filename))
+            config_filename = env_filename
+
+        return config_filename
+
+    def _effective_path(self):
+        """
+        Returns a list of paths to search for config files in reverse order of
+        precedence.  In other words: the last path element will override the
+        settings from the first one.
+        """
+        # default search path
+        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
+                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
+                getcwd()]
+
+        # If a path was passed directly to this method, override the path.
+        if self.search_path:
+            path = self.search_path.split(pathsep)
+
+        # if an environment variable was specified, override the path again.
+        # Environment variables take absolute precedence.
+        env_path = self._get_env_path()
+
+        if env_path and env_path.startswith('+'):
+            additional_paths = env_path[1:].split(pathsep)
+            LOG.info('Search path extended with with {0} by an environment '
+                     'vaiable.'.format(additional_paths))
+            path.extend(additional_paths)
+        elif env_path:
+            LOG.info('Configuration search path was overridden with {0} by an '
+                     'environment variable.'.format(env_path))
+            path = env_path.split(pathsep)
+
+        return path
+
+    def check_file(self, filename):
+        """
+        Check if a file can be read. Will return a 2-tuple containing a boolean
+        if the file can be read, and a string containing the cause (empty if
+        the file is readable).
+        """
+        if exists(filename):
+            return True, ''
+        else:
+            return False, 'File does not exist'
+
     def get(self, section, option, default=None, mandatory=False):
         """
         Overrides :py:meth:`SafeConfigParser.get`.
@@ -163,56 +227,47 @@ class Config(object, SafeConfigParser):
                       '``reload=True`` to avoid caching!')
             return
 
-        # default search path
-        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
-                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                getcwd()]
-
-        # If a path was passed directly to this method, override the path.
-        if self.search_path:
-            path = self.search_path.split(pathsep)
-
-        # if an environment variable was specified, override the path again.
-        # Environment variables take absolute precedence.
-        env_path = self._get_env_path()
-
-        if env_path and env_path.startswith('+'):
-            additional_paths = env_path[1:].split(pathsep)
-            LOG.info('Search path extended with with {0} by an environment '
-                     'vaiable.'.format(additional_paths))
-            path.extend(additional_paths)
-        elif env_path:
-            LOG.info('Configuration search path was overridden with {0} by an '
-                     'environment vaiable.'.format(env_path))
-            path = env_path.split(pathsep)
-
-        # same logic for the configuration filename. First, check if we were
-        # initialized with a filename...
-        config_filename = None
-        if self.filename:
-            config_filename = self.filename
-
-        # ... next, take the value from the environment
-        env_filename = self._get_env_filename()
-        if env_filename:
-            LOG.info('Configuration filename was overridden with {0} by an '
-                     'environment vaiable.'.format(env_filename))
-            config_filename = env_filename
+        path = self._effective_path()
+        config_filename = self._effective_filename()
 
         # Next, use the resolved path to find the filenames. Keep track of
         # which files we loaded in order to inform the user.
         self.active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
-            if exists(conf_name):
+            readable, cause = self.check_file(conf_name)
+            if readable:
                 self.read(conf_name)
                 LOG.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
                 self.loaded_files.append(conf_name)
             else:
-                LOG.debug('%s does not exist. Skipping...' % (conf_name, ))
+                LOG.debug('Unable to read %s (%s)' % (conf_name, cause))
 
         if not self.loaded_files:
             LOG.warning("No config file named %s found! Search path was %r" % (
                 config_filename, path))
+
+
+class SecuredConfig(Config):
+
+    def check_file(self, filename):
+        can_read, reason = super(SecuredConfig, self).check_file(filename)
+        if not can_read:
+            return False, reason
+
+        mode = get_stat(filename).st_mode
+        if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
+            return False, "File is not secure enough. Change it's mode to 600"
+        else:
+            return True, ''
+
+    def load(self, *args, **kwargs):
+        """
+        Overrides :py:meth:`Config.load` and will fail if the file is *not*
+        secured. In order for a file to be secured, it must have "600" file
+        permissions.
+        """
+
+        super(SecuredConfig, self).load(*args, **kwargs)
