@@ -106,6 +106,11 @@ class FunctionalityTests(unittest.TestCase):
                              search_path='testdata')
         self.assertIn(join('testdata', 'secure.ini'), conf.loaded_files)
 
+    def test_file_not_found_exception(self):
+        with self.assertRaises(IOError):
+            Config('hello', 'world', filename='nonexisting.ini',
+                   search_path='testdata', require_load=True)
+
 
 if __name__ == '__main__':
     unittest.main()
