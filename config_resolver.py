@@ -67,7 +67,7 @@ class Config(object, SafeConfigParser):
     """
 
     def __init__(self, group_name, app_name, search_path=None,
-                 filename='app.ini', **kwargs):
+                 filename='app.ini', require_load=False, **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
         self.config = None
         self.group_name = group_name
@@ -76,7 +76,7 @@ class Config(object, SafeConfigParser):
         self.filename = filename
         self.loaded_files = []
         self.active_path = []
-        self.load()
+        self.load(require_load=require_load)
 
     def _get_env_filename(self):
         old_filename_var = "%s_CONFIG" % self.app_name.upper()
@@ -205,7 +205,7 @@ class Config(object, SafeConfigParser):
                                                                   default))
             return default
 
-    def load(self, reload=False):
+    def load(self, reload=False, require_load=False):
         """
         Searches for an appropriate config file. If found, loads the file into
         the current instance. This method can also be used to re-load a
@@ -245,9 +245,12 @@ class Config(object, SafeConfigParser):
             else:
                 LOG.debug('Unable to read %s (%s)' % (conf_name, cause))
 
-        if not self.loaded_files:
+        if not self.loaded_files and not require_load:
             LOG.warning("No config file named %s found! Search path was %r" % (
                 config_filename, path))
+        elif not self.loaded_files and require_load:
+            raise IOError("No config file named %s found! Search path "
+                          "was %r" % (config_filename, path))
 
 
 class SecuredConfig(Config):
