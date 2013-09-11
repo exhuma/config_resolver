@@ -105,8 +105,6 @@ class FunctionalityTests(unittest.TestCase):
         conf = SecuredConfig('hello', 'world', filename='secure.ini',
                              search_path='testdata')
         self.assertIn(join('testdata', 'secure.ini'), conf.loaded_files)
-    else:
-        return True, ''
 
 
 if __name__ == '__main__':
