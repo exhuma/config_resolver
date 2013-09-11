@@ -21,9 +21,10 @@ The resolver parses config files according to the default python
 """
 
 from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
-from os import getenv, pathsep, getcwd
+from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
+import stat
 from warnings import warn
 
 __version__ = '3.2.1'
@@ -250,6 +251,17 @@ class Config(object, SafeConfigParser):
 
 
 class SecuredConfig(Config):
+
+    def check_file(self, filename):
+        can_read, reason = super(SecuredConfig, self).check_file(filename)
+        if not can_read:
+            return False, reason
+
+        mode = get_stat(filename).st_mode
+        if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
+            return False, "File is not secure enough. Change it's mode to 600"
+        else:
+            return True, ''
 
     def load(self, *args, **kwargs):
         """
