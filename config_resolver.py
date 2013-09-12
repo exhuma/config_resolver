@@ -265,12 +265,3 @@ class SecuredConfig(Config):
             return False, "File is not secure enough. Change it's mode to 600"
         else:
             return True, ''
-
-    def load(self, *args, **kwargs):
-        """
-        Overrides :py:meth:`Config.load` and will fail if the file is *not*
-        secured. In order for a file to be secured, it must have "600" file
-        permissions.
-        """
-
-        super(SecuredConfig, self).load(*args, **kwargs)
