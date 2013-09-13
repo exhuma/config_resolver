@@ -1,3 +1,21 @@
+Release 3.3.0
+-------------
+
+Features added
+~~~~~~~~~~~~~~
+
+* New (optional) argument: ``require_load``. If set to ``True`` creating a
+  config instance will raise an error if no appropriate config file is found.
+
+* New class: ``SecuredConfig``: This class will refuse to load config files
+  which are readable by other users than the owner.
+
+Improvments
+~~~~~~~~~~~~~~~~~
+
+* Documentation updated/extended.
+* Code cleanup.
+
 Release 3.2.2
 -------------
 
