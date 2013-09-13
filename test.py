@@ -1,8 +1,9 @@
 import unittest
 import os
-from os.path import expanduser
+from os.path import expanduser, join
+from ConfigParser import NoOptionError, NoSectionError
 
-from config_resolver import Config
+from config_resolver import Config, SecuredConfig
 
 
 class SimpleInitTest(unittest.TestCase):
@@ -80,6 +81,41 @@ class AdvancedInitTest(unittest.TestCase):
         cfg = Config('hello', 'world')
         self.assertEqual(cfg.group_name, 'hello')
         self.assertEqual(cfg.app_name, 'world')
+
+
+class FunctionalityTests(unittest.TestCase):
+
+    def setUp(self):
+        self.cfg = Config('hello', 'world', search_path='testdata')
+
+    def test_mandatory_section(self):
+        with self.assertRaises(NoSectionError):
+            self.cfg.get('nosuchsection', 'nosuchoption', mandatory=True)
+
+    def test_mandatory_option(self):
+        with self.assertRaises(NoOptionError):
+            self.cfg.get('section1', 'nosuchoption', mandatory=True)
+
+    def test_unsecured_file(self):
+        conf = SecuredConfig('hello', 'world', filename='test.ini',
+                             search_path='testdata')
+        self.assertNotIn(join('testdata', 'test.ini'), conf.loaded_files)
+
+    def test_secured_file(self):
+        conf = SecuredConfig('hello', 'world', filename='secure.ini',
+                             search_path='testdata')
+        self.assertIn(join('testdata', 'secure.ini'), conf.loaded_files)
+
+    def test_secured_nonexisting_file(self):
+        conf = SecuredConfig('hello', 'world', filename='nonexisting.ini',
+                             search_path='testdata')
+        self.assertNotIn(join('testdata', 'nonexisting.ini'),
+                         conf.loaded_files)
+
+    def test_file_not_found_exception(self):
+        with self.assertRaises(IOError):
+            Config('hello', 'world', filename='nonexisting.ini',
+                   search_path='testdata', require_load=True)
 
 
 if __name__ == '__main__':
