@@ -272,7 +272,7 @@ class Config(ConfigResolverBase):
         # default search path
         path = ['/etc/%s/%s' % (self.group_name, self.app_name),
                 expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                getcwd()]
+                join(getcwd(), '.{}'.format(self.group_name), self.app_name)]
 
         # If a path was passed directly to this instance, override the path.
         if self.search_path:
