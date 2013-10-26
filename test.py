@@ -2,7 +2,11 @@ import unittest
 import logging
 import os
 from os.path import expanduser, join
-from ConfigParser import NoOptionError, NoSectionError
+
+try:
+    from ConfigParser import NoOptionError, NoSectionError
+except ImportError:
+    from configparser import NoOptionError, NoSectionError
 
 from config_resolver import (
     Config,

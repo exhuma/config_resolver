@@ -134,7 +134,11 @@ search path after processing of environment variables and runtime parameters.
 This may also be useful to display informtation to the end-user.
 """
 
-from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
+try:
+    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
+except ImportError:
+    from configparser import SafeConfigParser, NoOptionError, NoSectionError
+
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
@@ -155,7 +159,17 @@ class NoVersionError(Exception):
     pass
 
 
-class Config(object, SafeConfigParser):
+try:
+    # Python 2
+    class ConfigResolverBase(object, SafeConfigParser):
+        pass
+except TypeError:
+    # Python 3
+    class ConfigResolverBase(SafeConfigParser):
+        pass
+
+
+class Config(ConfigResolverBase):
     """
     :param group_name: an application group (f. ex.: your company name)
     :param app_name: an application identifier (f.ex.: the application
