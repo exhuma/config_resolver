@@ -146,7 +146,7 @@ import stat
 from warnings import warn
 from distutils.version import StrictVersion
 
-__version__ = '3.3.0'
+__version__ = '4.0.0'
 
 LOG = logging.getLogger(__name__)
 
