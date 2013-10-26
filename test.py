@@ -79,7 +79,7 @@ class AdvancedInitTest(unittest.TestCase):
         cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
                     expanduser('~/.hello/world/test.ini'),
-                    '{}/test.ini'.format(os.getcwd())]
+                    '{}/.hello/world/test.ini'.format(os.getcwd())]
         self.assertEqual(
             cfg.active_path,
             expected)
@@ -88,7 +88,8 @@ class AdvancedInitTest(unittest.TestCase):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
         cfg = Config('hello', 'world')
         expected = ['testdata/app.ini',
-                    'testdata/a/app.ini', 'testdata/b/app.ini']
+                    'testdata/a/app.ini',
+                    'testdata/b/app.ini']
         self.assertEqual(
             cfg.active_path,
             expected)
@@ -98,7 +99,7 @@ class AdvancedInitTest(unittest.TestCase):
         cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
                     expanduser('~/.hello/world/app.ini'),
-                    '{}/app.ini'.format(os.getcwd()),
+                    '{}/.hello/world/app.ini'.format(os.getcwd()),
                     'testdata/app.ini',
                     'testdata/a/app.ini', 'testdata/b/app.ini']
         self.assertEqual(
