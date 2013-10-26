@@ -1,4 +1,7 @@
 /*.egg-info
+/.coverage
 /app.ini
 /dist
 /env
+/env3
+/htmlcov
