@@ -1,9 +1,47 @@
 import unittest
+import logging
 import os
 from os.path import expanduser, join
 from ConfigParser import NoOptionError, NoSectionError
 
-from config_resolver import Config, SecuredConfig
+from config_resolver import (
+    Config,
+    SecuredConfig,
+    NoVersionError,
+    IncompatibleVersion)
+
+
+class TestableHandler(logging.Handler):
+    """
+    A logging handler which is usable in unit tests. Log records are simply
+    appended to an internal list and can be checked with ``contains``.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(TestableHandler, self).__init__(*args, **kwargs)
+        self.records = []
+
+    def emit(self, record):
+        """
+        Overrides :py:meth:`logging.Handler.emit`.
+        """
+        self.records.append(record)
+
+    def contains(self, logger, level, message):
+        """
+        Checks whether a message has been logged to a specific logger with a
+        specific level.
+
+        :param logger: The logger.
+        :param level: The log level.
+        :param messgae: The message contents.
+        """
+        for record in self.records:
+            if record.name != logger or record.levelno != level:
+                continue
+            if message in record.message:
+                return True
+        return False
 
 
 class SimpleInitTest(unittest.TestCase):
@@ -116,6 +154,27 @@ class FunctionalityTests(unittest.TestCase):
         with self.assertRaises(IOError):
             Config('hello', 'world', filename='nonexisting.ini',
                    search_path='testdata', require_load=True)
+
+    def test_no_version_found_warning(self):
+        with self.assertRaises(NoVersionError):
+            Config('hello', 'world', search_path='testdata', version='1.1')
+
+    def test_mismatching_major(self):
+        with self.assertRaises(IncompatibleVersion):
+            Config('hello', 'world', search_path='testdata/versioned',
+                   version='1.1')
+
+    def test_mismatching_minor(self):
+        logger = logging.getLogger('config_resolver')
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='2.0')
+        result = catcher.contains(
+            'config_resolver',
+            logging.WARNING,
+            'Mismatching minor version number')
+        self.assertTrue(result)
 
 
 if __name__ == '__main__':

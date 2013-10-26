@@ -140,10 +140,19 @@ from os.path import expanduser, exists, join
 import logging
 import stat
 from warnings import warn
+from distutils.version import StrictVersion
 
 __version__ = '3.3.0'
 
 LOG = logging.getLogger(__name__)
+
+
+class IncompatibleVersion(Exception):
+    pass
+
+
+class NoVersionError(Exception):
+    pass
 
 
 class Config(object, SafeConfigParser):
@@ -166,8 +175,10 @@ class Config(object, SafeConfigParser):
     """
 
     def __init__(self, group_name, app_name, search_path=None,
-                 filename='app.ini', require_load=False, **kwargs):
+                 filename='app.ini', require_load=False, version=None,
+                 **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
+        self.version = version and StrictVersion(version) or None
         self.config = None
         self.group_name = group_name
         self.app_name = app_name
@@ -367,6 +378,37 @@ class Config(object, SafeConfigParser):
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
+
+    def read(self, *args, **kwargs):
+        output = super(Config, self).read(*args, **kwargs)
+        if not self.version:
+            # No versioning is expected, so we can ignore the rest of this
+            # method.
+            return output
+
+        # The config object was apparently instantiated with a version number.
+        # Check that config files we read have appropriate version information.
+        if self.has_option('meta', 'version'):
+            major, minor, _ = StrictVersion(
+                self.get('meta', 'version')).version
+            expected_major, expected_minor, _ = self.version.version
+
+            if expected_major != major:
+                raise IncompatibleVersion(
+                    'Invalid major version number. Expected {!r}, got {!r} '
+                    'from filename {!r}!'.format(expected_major, major,
+                                                 args[0]))
+
+            if expected_minor != minor:
+                LOG.warning('Mismatching minor version number. '
+                            'Expected {!r}, got {!r} '
+                            'from filename {!r}'.format(expected_minor, minor,
+                                                        args[0]))
+        else:
+            raise NoVersionError(
+                "The config option 'meta.version' is missing in {}. The "
+                "application expects version {}!".format(args[0],
+                                                         self.version))
 
 
 class SecuredConfig(Config):
