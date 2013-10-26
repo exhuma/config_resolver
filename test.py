@@ -72,10 +72,10 @@ class AdvancedInitTest(unittest.TestCase):
 
     def tearDown(self):
         os.environ.pop('HELLO_WORLD_PATH', None)
-        os.environ.pop('HELLO_WORLD_CONFIG', None)
+        os.environ.pop('HELLO_WORLD_FILENAME', None)
 
     def test_env_name(self):
-        os.environ['HELLO_WORLD_CONFIG'] = 'test.ini'
+        os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
         cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
                     expanduser('~/.hello/world/test.ini'),
@@ -83,6 +83,21 @@ class AdvancedInitTest(unittest.TestCase):
         self.assertEqual(
             cfg.active_path,
             expected)
+
+    def test_env_name_override(self):
+        os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
+        logger = logging.getLogger('config_resolver')
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world')
+        msg = ("filename was overridden with 'test.ini' by the environment "
+               "variable HELLO_WORLD_FILENAME")
+        result = catcher.contains(
+            'config_resolver',
+            logging.INFO,
+            msg)
+        self.assertTrue(result, 'Expected log message {!r} not found in '
+                        'logger!'.format(msg))
 
     def test_env_path(self):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
@@ -93,6 +108,21 @@ class AdvancedInitTest(unittest.TestCase):
         self.assertEqual(
             cfg.active_path,
             expected)
+
+    def test_env_path_override_log(self):
+        logger = logging.getLogger('config_resolver')
+        os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world')
+        msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
+               "environment variable 'HELLO_WORLD_PATH'")
+        result = catcher.contains(
+            'config_resolver',
+            logging.INFO,
+            msg)
+        self.assertTrue(result, 'Expected log message {!r} not found in '
+                        'logger!'.format(msg))
 
     def test_env_path_add(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
@@ -105,6 +135,21 @@ class AdvancedInitTest(unittest.TestCase):
         self.assertEqual(
             cfg.active_path,
             expected)
+
+    def test_env_path_add_log(self):
+        logger = logging.getLogger('config_resolver')
+        os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world')
+        msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
+               "environment variable HELLO_WORLD_PATH")
+        result = catcher.contains(
+            'config_resolver',
+            logging.INFO,
+            msg)
+        self.assertTrue(result, 'Expected log message {!r} not found in '
+                        'logger!'.format(msg))
 
     def test_search_path(self):
         cfg = Config('hello', 'world',

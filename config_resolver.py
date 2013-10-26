@@ -202,47 +202,6 @@ class Config(ConfigResolverBase):
         self.active_path = []
         self.load(require_load=require_load)
 
-    def _get_env_filename(self):
-        """
-        Returns the config filename from the environment variable if it exists.
-        Otherwise it will return None.
-
-        The environment variable must be named <GROUP_NAME>_<APP_NAME>_CONFIG
-        """
-        old_filename_var = "%s_CONFIG" % self.app_name.upper()
-        filename_var = "%s_%s_CONFIG" % (
-            self.group_name.upper(),
-            self.app_name.upper())
-        env_filename = getenv(old_filename_var)
-        if env_filename:  # pragma: no cover
-            warn(DeprecationWarning('No group prefixed in environment '
-                                    'variable! This behaviour is deprecated. '
-                                    'See the docs!'))
-        else:
-            env_filename = getenv(filename_var)
-        return env_filename
-
-    def _get_env_path(self):
-        """
-        Returns the search path from the environment variable. None if it does
-        not exist.
-
-        The environment variable must be named <GROUP_NAME>_<APP_NAME>_PATH
-        """
-        old_path_var = "%s_PATH" % self.app_name.upper()
-        path_var = "%s_%s_PATH" % (
-            self.group_name.upper(),
-            self.app_name.upper())
-
-        env_path = getenv(old_path_var)
-        if env_path:  # pragma: no cover
-            warn(DeprecationWarning('No group prefixed in environment '
-                                    'variable! This behaviour is deprecated. '
-                                    'See the docs!'))
-        else:
-            env_path = getenv(path_var)
-        return env_path
-
     def _effective_filename(self):
         """
         Returns the filename which is effectively used by the application. If
@@ -255,10 +214,11 @@ class Config(ConfigResolverBase):
             config_filename = self.filename
 
         # ... next, take the value from the environment
-        env_filename = self._get_env_filename()
+        env_filename = getenv(self.env_filename_name)
         if env_filename:
-            LOG.info('Configuration filename was overridden with {0} by an '
-                     'environment vaiable.'.format(env_filename))
+            LOG.info('Configuration filename was overridden with {0!r} by the '
+                     'environment variable HELLO_WORLD_FILENAME.'.format(
+                         env_filename))
             config_filename = env_filename
 
         return config_filename
@@ -279,21 +239,35 @@ class Config(ConfigResolverBase):
             path = self.search_path.split(pathsep)
 
         # Next, consider the environment variables...
-        env_path = self._get_env_path()
+        env_path = getenv(self.env_path_name)
 
         if env_path and env_path.startswith('+'):
             # If prefixed with a '+', append the path elements
             additional_paths = env_path[1:].split(pathsep)
-            LOG.info('Search path extended with with {0} by an environment '
-                     'vaiable.'.format(additional_paths))
+            LOG.info('Search path extended with {0!r} by the environment '
+                     'variable HELLO_WORLD_PATH.'.format(additional_paths))
             path.extend(additional_paths)
         elif env_path:
             # Otherwise, override again. This takes absolute precedence.
-            LOG.info('Configuration search path was overridden with {0} by an '
-                     'environment variable.'.format(env_path))
+            LOG.info("Configuration search path was overridden with {0!r} by "
+                     "the environment variable {1!r}.".format(
+                         env_path,
+                         self.env_path_name))
             path = env_path.split(pathsep)
 
         return path
+
+    @property
+    def env_filename_name(self):
+        return "%s_%s_FILENAME" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+
+    @property
+    def env_path_name(self):
+        return "%s_%s_PATH" % (
+            self.group_name.upper(),
+            self.app_name.upper())
 
     def check_file(self, filename):
         """
