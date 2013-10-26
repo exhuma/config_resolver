@@ -384,7 +384,7 @@ class Config(ConfigResolverBase):
                     conf_name))
                 self.loaded_files.append(conf_name)
             else:
-                LOG.debug('Unable to read %s (%s)' % (conf_name, cause))
+                LOG.warning('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             LOG.warning("No config file named %s found! Search path was %r" % (

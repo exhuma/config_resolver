@@ -139,6 +139,22 @@ class FunctionalityTests(unittest.TestCase):
         with self.assertRaises(NoOptionError):
             self.cfg.get('section1', 'nosuchoption', mandatory=True)
 
+    def test_unsecured_logmessage(self):
+        logger = logging.getLogger('config_resolver')
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        SecuredConfig('hello', 'world', filename='test.ini',
+                      search_path='testdata')
+        expected_message = (
+            "Unable to read 'testdata/test.ini' (File is not secure enough. "
+            "Change it's mode to 600)")
+        result = catcher.contains(
+            'config_resolver',
+            logging.WARNING,
+            expected_message)
+        self.assertTrue(result, "Expected log message: {!r} not found in "
+                        "logger!".format(expected_message))
+
     def test_unsecured_file(self):
         conf = SecuredConfig('hello', 'world', filename='test.ini',
                              search_path='testdata')
