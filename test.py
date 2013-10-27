@@ -62,10 +62,10 @@ class SimpleInitTest(unittest.TestCase):
         self.assertEqual(self.cfg.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        self.assertIs(self.cfg.get('section1', 'b'), None)
+        self.assertIs(self.cfg.get('section1', 'b', default=None), None)
 
     def test_no_section_error(self):
-        self.assertIs(self.cfg.get('a', 'b'), None)
+        self.assertIs(self.cfg.get('a', 'b', default=None), None)
 
 
 class AdvancedInitTest(unittest.TestCase):
@@ -178,11 +178,11 @@ class FunctionalityTests(unittest.TestCase):
 
     def test_mandatory_section(self):
         with self.assertRaises(NoSectionError):
-            self.cfg.get('nosuchsection', 'nosuchoption', mandatory=True)
+            self.cfg.get('nosuchsection', 'nosuchoption')
 
     def test_mandatory_option(self):
         with self.assertRaises(NoOptionError):
-            self.cfg.get('section1', 'nosuchoption', mandatory=True)
+            self.cfg.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')

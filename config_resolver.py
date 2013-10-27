@@ -1,139 +1,3 @@
-"""
-`config_resolver` is a module which searches for config files using a
-predictable pattern, while still making it posible for the end-user to override
-this search (that is, the end-user can always specify his/her own config file).
-
-Config files are parsed using the default python ``ConfigParser`` (i.e. ``ini``
-files).
-
-The module assumes a fairly common pattern to have both an application "group"
-(for example the company name) and an application name and will search in
-appropriate locations. For example, if your company is named "acme_corp" and
-you had an application named "bird_feeder" it would search in the following
-folders:
-
-* ``/etc/acmecorp/bird_feeder/app.ini``
-* ``~/.acmecorp/bird_feeder/app.ini``
-* ``./app.ini``
-
-Both the search path and the basename of the file (`app.ini`) can be overridden
-by the application developer via the API and by the end-user via environment
-variables.
-
-.. note::
-    Both the ``filename`` API argument, and the ``GROUP_APP_CONFIG``
-    environment variable override the config file *basename*. Not the folder!
-
-File loading proceeds in the same order as displayed above, and each new read
-will override values from a previous file. This means that the file in
-`~/.acmecorp/bird_feeder` will override the values from the file in
-`/etc/acmecorp/bird_feeder`. And lastly, if a file named `app.ini` is found in
-the *current working folder*, that file will again override already loaded
-values. This can come in very handy when running multiple instances of the same
-application, but want to run each instance with a different config.
-
-Basic Usage
------------
-
-In it's most basic form, the following two lines are all you need::
-
-    from config_resolver import Config
-    conf = Config('mycompany', 'myapplication')
-
-Note that when using `config_resolver` in this way, non-existing files will be
-silently ignored (logged).
-
-All operations are logged using the default ``logging`` package. The log
-messages include the absolute names of the loaded files. If a file is not
-loadable, a ``WARNING`` message is emitted. It also contains a couple of
-``DEBUG`` messages. If you want to see those messages on-screen you could do
-the following (not suitable for production code!)::
-
-    import logging
-    from config_resolver import Config
-    logging.basicConfig(level=logging.DEBUG)
-    conf = Config('mycompany', 'myapplication')
-
-Environment Variables
----------------------
-
-The resolver can also be manipulated using environment variables to allow
-different values for different running instances. The variable names are all
-upper-case and are prefixed with both group- and application-name.
-
-<group_name>_<app_name>_PATH
-    The search path for config files. You can specify multiple paths by
-    separating it by the system's path separator default (``:`` on *nix).
-
-    If the path is prefixed with ``+``, then the path elements are *appended*
-    to the default search path. This is the recommended way to specify the
-    path, as it will not short-circuit the existing lookup logic.
-
-<group_name>_<app_name>_CONFIG
-    The file name of the config file. Note that this should *not* be given with
-    leading path elements. It should simply be a file basename (f.ex.:
-    ``my_config.ini``)
-
-Difference to ConfigParser
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is one **major** difference to the default Python ``ConfigParser``: the
-``.get`` method accepts a "default" parameter which itself defaults to
-``None``.  This in turn means that the errors `NoSectionError` and
-`NoOptionError` are **not** raised as you might expect. Instead, the default
-value is returned in such a case. This is **intentional**! I find the support
-for default values in the core library's ``ConfigParser`` lacking, you cannot
-have two options with the same name in two sections with *different* values.
-Imagine the following::
-
-    [database1]
-    dsn=sqlite:///tmp/db.sqlite3
-
-    [database2]
-    dsn=sqlite:///tmp/db2.sqlite3
-
-In the core ``ConfigParser`` you could *not* specify two different default
-values!
-
-It turned out however, that sometimes people want those errors to be raised.
-For that reason, a new ``mandatory`` argument has been added to the ``.get``
-method. If that is set to ``True`` (defaults to ``False``), then the
-appropriate errors are raised again.
-
-Advanced Usage
---------------
-
-Since version 3.3.0, you have a bit more control about how files are loaded.
-:py:class:`.Config` has a new paramter: ``require_load``. If this is set to
-``True``, an ``OSError`` is raised if no config file was loaded. Alternatively,
-and, purely a matter of taste, you can leave this on it's default ``False``
-value and inspect the ``loaded_files`` attribute on the ``Config`` instance. If
-it's empty, nothing has been loaded.
-
-Additionally, you can use :py:class:`.SecuredConfig`. This class refuses to
-load config files which are readable by other users than the owner.
-
-Debugging
----------
-
-Creating the config object will not raise an error (except if asked to do so).
-Instead it will always return a valid, (but possibly empty) :py:class:`.Config`
-instance. So errors can be hard to see sometimes.
-
-Your first stop should be to configure logging and look at the emitted
-messages. If that does not help, then continue reading.
-
-In order to determine whether any config file was loaded, you can look into the
-``loaded_files`` instance variable. It contains a list of all the loaded files,
-in the order of loading.  If that list is empty, no config has been found. Also
-remember that the order is important. Later elements will override values from
-earliner elements.
-
-Additionally, another instance variable named ``active_path`` represents the
-search path after processing of environment variables and runtime parameters.
-This may also be useful to display informtation to the end-user.
-"""
-
 try:
     from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -146,7 +10,7 @@ import stat
 from warnings import warn
 from distutils.version import StrictVersion
 
-__version__ = '3.3.0'
+__version__ = '4.0.0'
 
 LOG = logging.getLogger(__name__)
 
@@ -184,8 +48,13 @@ class Config(ConfigResolverBase):
     :param filename: if specified, this can be used to override the
         configuration filename.
     :param require_load: If this is set to ``True``, creation of the config
-        instance will raise an ``OSError`` if not a single file could be
+        instance will raise an :py:exc:`OSError` if not a single file could be
         loaded.
+    :param version: If specified (f.ex.: ``version='2.0'``), this will create a
+        versioned config instance. A versioned instance may raise a
+        :py:exc:`.IncompatibleVersion` exception if the major version differs
+        from the one found in the config file. If left to the default, no
+        version checking is performed.
     """
 
     def __init__(self, group_name, app_name, search_path=None,
@@ -271,9 +140,9 @@ class Config(ConfigResolverBase):
 
     def check_file(self, filename):
         """
-        Check if a file can be read. Will return a 2-tuple containing a boolean
-        if the file can be read, and a string containing the cause (empty if
-        the file is readable).
+        Check if ``filename`` can be read. Will return a 2-tuple containing a
+        boolean if the file can be read, and a string containing the cause
+        (empty if the file is readable).
 
         This mainly exists to make it possible to override this with different
         rules.
@@ -283,47 +152,44 @@ class Config(ConfigResolverBase):
         else:
             return False, 'File does not exist'
 
-    def get(self, section, option, default=None, mandatory=False):
+    def get(self, section, option, **kwargs):
         """
-        Overrides :py:meth:`SafeConfigParser.get`.
+        Overrides :py:meth:`configparser.SafeConfigParser.get`.
 
         In addition to ``section`` and ``option``, this call takes an optional
         ``default`` value. This behaviour works in *addition* to the
-        ``SafeConfigParser`` default mechanism. Note that a default value from
-        ``SafeConfigParser`` takes precedence.
+        :py:class:`configparser.SafeConfigParser` default mechanism. Note that
+        a default value from ``SafeConfigParser`` takes precedence.
 
         The reason this additional functionality is added, is because the
-        defaults of ``SafeConfigParser`` are not dependent on sections. If you
-        specify a default for the option ``test``, then this value will be
-        returned for both ``section1.test`` and for ``section2.test``. Using
-        the default on the ``get`` call gives you more fine-grained control
-        over this.
+        defaults of :py:class:`configparser.SafeConfigParser` are not dependent
+        on sections. If you specify a default for the option ``test``, then
+        this value will be returned for both ``section1.test`` and for
+        ``section2.test``. Using the default on the ``get`` call gives you more
+        fine-grained control over this.
 
         Also note, that if a default value has to be used, it will be logged
         with level ``logging.DEBUG``.
 
-        If the optional argument ``mandatory`` is set to ``True``, this method
-        will *always* raise a :py:exc:`ConfigParser.NoOptionError` or a
-        :py:exc:`NoSectionError`, even if defaults have been passed in
-        following the ``SafeConfigParser`` semantics.
+        :param section: The config file section.
+        :param option: The option name.
         """
-        if mandatory and not self.has_section(section):
-            raise NoSectionError(section)
-        elif mandatory and not self.has_option(section, option):
-            raise NoOptionError(option, section)
-
         try:
             value = SafeConfigParser.get(self, section, option)
             return value
         except (NoSectionError, NoOptionError) as exc:
-            LOG.debug("{0}: Returning default value {1!r}".format(exc,
-                                                                  default))
-            return default
+            if "default" in kwargs:
+                LOG.debug("{0}: Returning default value {1!r}".format(
+                    exc,
+                    kwargs['default']))
+                return kwargs['default']
+            else:
+                raise
 
     def load(self, reload=False, require_load=False):
         """
         Searches for an appropriate config file. If found, loads the file into
-        the current instance. This method can also be used to re-load a
+        the current instance. This method can also be used to reload a
         configuration. Note that you may want to set ``reload`` to ``True`` to
         clear the configuration before loading in that case.  Without doing
         that, values will remain available even if they have been removed from
@@ -331,6 +197,9 @@ class Config(ConfigResolverBase):
 
         :param reload: if set to ``True``, the existing values are cleared
                        before reloading.
+        :param require_load: If set to ``True`` this will raise a
+                             :py:exc:`IOError` if no config file has been found
+                             to load.
         """
 
         if reload:  # pragma: no cover
@@ -368,6 +237,13 @@ class Config(ConfigResolverBase):
                           "was %r" % (config_filename, path))
 
     def read(self, *args, **kwargs):
+        """
+        Overrides :py:meth:`configparser.SafeConfigParser.read`.
+
+        In addition to the default ``read`` method, this does version checking
+        if this instance has been created with a version number. It uses
+        :py:class:`distutils.version.StrictVersion` for version parsing.
+        """
         output = super(Config, self).read(*args, **kwargs)
         if not self.version:
             # No versioning is expected, so we can ignore the rest of this
