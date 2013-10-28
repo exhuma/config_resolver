@@ -1,6 +1,8 @@
 User Manual
 ===========
 
+Read the full manual at http://config-resolver.readthedocs.org/en/latest/
+
 Rationale
 ~~~~~~~~~
 
