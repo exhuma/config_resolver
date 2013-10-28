@@ -1,7 +1,15 @@
 User Manual
 ===========
 
-Read the full manual at http://config-resolver.readthedocs.org/en/latest/
+Fulll Documentation
+    https://config-resolver.readthedocs.org/en/latest/
+
+Repository
+    https://github.com/exhuma/config_resolver
+
+PyPI
+    https://pypi.python.org/pypi/config_resolver
+
 
 Rationale
 ~~~~~~~~~
