@@ -38,12 +38,34 @@ mentioned decision to load files or not::
 This will look for config files in (in that order):
 
 * ``/etc/acmecorp/bird_feeder/app.ini``
+* ``/etc/xdg/acmecorp/bird_feeder/app.ini``
 * ``~/.acmecorp/bird_feeder/app.ini``
+* ``~/.config/acmecorp/bird_feeder/app.ini``
 * ``./.acmecorp/bird_feeder/app.ini``
 
 If all files exist, one which is loaded later, will override the values of an
 earlier file. No values will be removed, this means you can put system-wide
 defaults in ``/etc`` and specialise from there.
+
+The Freedesktop XDG standard
+----------------------------
+
+*freedesktop.org* standardises the location of configuration files in thei XDG
+specification (See
+http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). Since
+version 4.1.0, ``config_resolver`` reads these paths as well, and honors the
+defined environment variables. To ensure backwards compatibility, those paths
+have only been added to the resolution order. They have a higher precedence
+than the old locations though. So the following applies:
+
+============================== =====================
+XDG item                        overrides
+============================== =====================
+``/etc/xdg/<group>/<app>``      ``/etc/group/app``
+``~/.config/<group>/</app>``    ``~/.group/app``
+``$XDG_DATA_HOME``              ``$GROUP_APP_PATH``
+``$XDG_CONFIG_DIRS``            ``$GROUP_APP_PATH``
+============================== =====================
 
 Files are parsed using the default Python :py:class:`configparser.ConfigParser`
 (i.e. ``ini`` files).
@@ -122,7 +144,13 @@ By the end-user
 The end-user has access to two environment variables:
 
 * ``<GROUP_NAME>_<APP_NAME>_PATH`` overrides the default search path.
-* ``<GROUP_NAME>_<APP_NAME>_FILENAME`` overrides the default basename.
+* ``XDG_CONFIG_HOME`` overrides the path considered as "home" locations for
+  config files (default=``~/.config``)
+* ``XDG_CONFIG_DIRS`` overrides additional path elements as recommended by
+  *freedesktop.org*. Paths are separated by ``:`` and are sorted with
+  descending precedence (leftmost is the most important one).
+* ``<GROUP_NAME>_<APP_NAME>_FILENAME`` overrides the default basename of the
+  config file (default=``app.ini``).
 
 .. note::
     If an application uses more than one config instance, the environment
@@ -162,6 +190,10 @@ upper-case and are prefixed with both group- and application-name.
     The file name of the config file. Note that this should *not* be given with
     leading path elements. It should simply be a file basename (f.ex.:
     ``my_config.ini``)
+
+XDG_CONFIG_HOME
+XDG_CONFIG_DIRS
+    See http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 Difference to ConfigParser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
