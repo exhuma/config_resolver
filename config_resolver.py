@@ -60,7 +60,7 @@ class Config(ConfigResolverBase):
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
-        SafeConfigParser.__init__(self, **kwargs)
+        ConfigResolverBase.__init__(self, **kwargs)
         self.version = version and StrictVersion(version) or None
         self.config = None
         self.group_name = group_name
