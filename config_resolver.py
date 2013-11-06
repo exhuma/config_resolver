@@ -77,7 +77,33 @@ class Config(ConfigResolverBase):
             self.app_name.upper())
         self.load(require_load=require_load)
 
+    def get_xdg_dirs(self):
+        """
+        Returns a list of paths specified by the XDG_CONFIG_DIRS environment
+        variable or the appropriate default.
 
+        The list is sorted by precedence, with the most important item coming
+        *last* (required by the existing config_resolver logic).
+        """
+        config_dirs = getenv('XDG_CONFIG_DIRS', '')
+        if config_dirs:
+            LOG.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
+            return list(reversed(config_dirs.split(':')))
+        else:
+            return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
+
+    def get_xdg_home(self):
+        """
+        Returns the value specified in the XDG_CONFIG_HOME environment variable
+        or the appropriate default.
+        """
+        config_home = getenv('XDG_CONFIG_HOME', '')
+        if config_home:
+            LOG.debug('XDG_CONFIG_HOME is set to %r', config_home)
+            return expanduser(config_home)
+        else:
+            return expanduser('~/.config/%s/%s' % (self.group_name,
+                                                   self.app_name))
 
     def _effective_filename(self):
         """
