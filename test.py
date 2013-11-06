@@ -1,7 +1,8 @@
+from contextlib import contextmanager
 import unittest
 import logging
 import os
-from os.path import expanduser, join
+from os.path import expanduser, join, abspath
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -13,6 +14,27 @@ from config_resolver import (
     SecuredConfig,
     NoVersionError,
     IncompatibleVersion)
+
+
+@contextmanager
+def environment(**kwargs):
+    """
+    Context manager to tempolrarily change environment variables. On exit all
+    variables are set to their original value.
+    """
+    old_values = {}
+    nonexistent = set()
+    for key in kwargs:
+        if key not in os.environ:
+            nonexistent.add(key)
+        else:
+            old_values[key] = os.environ[key]
+        os.environ[key] = kwargs[key]
+    yield
+    for key in old_values:
+        os.environ[key] = old_values[key]
+    for key in nonexistent:
+        os.environ.pop(key)
 
 
 class TestableHandler(logging.Handler):
@@ -241,6 +263,64 @@ class FunctionalityTests(unittest.TestCase):
             logging.WARNING,
             'Mismatching minor version number')
         self.assertTrue(result)
+
+    def test_xdg_config_dirs(self):
+        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2'):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/xdgpath2/foo/bar/app.ini',
+                '/xdgpath1/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_empty_config_dirs(self):
+        with environment(XDG_CONFIG_DIRS=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_config_home(self):
+        with environment(XDG_CONFIG_HOME='/path/to/config/home'):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                '/path/to/config/home/foo/bar/app.ini',
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_empty_config_home(self):
+        with environment(XDG_CONFIG_HOME=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_both_xdg_variables(self):
+        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
+                         XDG_CONFIG_HOME='/xdg/config/home'):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/xdgpath2/foo/bar/app.ini',
+                '/xdgpath1/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                '/xdg/config/home/foo/bar/app.ini',
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
 
 
 if __name__ == '__main__':
