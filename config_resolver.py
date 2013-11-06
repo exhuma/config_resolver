@@ -70,6 +70,14 @@ class Config(ConfigResolverBase):
         self.loaded_files = []
         self.active_path = []
         self.load(require_load=require_load)
+        self.env_path_name = "%s_%s_PATH" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+        self.env_filename_name = "%s_%s_FILENAME" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+
+
 
     def _effective_filename(self):
         """
@@ -125,18 +133,6 @@ class Config(ConfigResolverBase):
             path = env_path.split(pathsep)
 
         return path
-
-    @property
-    def env_filename_name(self):
-        return "%s_%s_FILENAME" % (
-            self.group_name.upper(),
-            self.app_name.upper())
-
-    @property
-    def env_path_name(self):
-        return "%s_%s_PATH" % (
-            self.group_name.upper(),
-            self.app_name.upper())
 
     def check_file(self, filename):
         """
