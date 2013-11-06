@@ -69,13 +69,13 @@ class Config(ConfigResolverBase):
         self.filename = filename
         self.loaded_files = []
         self.active_path = []
-        self.load(require_load=require_load)
         self.env_path_name = "%s_%s_PATH" % (
             self.group_name.upper(),
             self.app_name.upper())
         self.env_filename_name = "%s_%s_FILENAME" % (
             self.group_name.upper(),
             self.app_name.upper())
+        self.load(require_load=require_load)
 
 
 
