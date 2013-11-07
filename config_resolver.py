@@ -1,3 +1,9 @@
+"""
+config_resolver provides a ``Config`` class, which looks up common locations
+for config files and loads them if found. It provides a framework independed
+way of handling configuration files. Additional care has been taken to allow
+the end-user of the application to override this lookup process.
+"""
 try:
     from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -7,7 +13,6 @@ from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
 import stat
-from warnings import warn
 from distutils.version import StrictVersion
 
 __version__ = '4.0.0'
@@ -16,20 +21,36 @@ LOG = logging.getLogger(__name__)
 
 
 class IncompatibleVersion(Exception):
+    """
+    This exception is raised if a config file is loaded which has a different
+    major version number than expected by the application.
+    """
     pass
 
 
 class NoVersionError(Exception):
+    """
+    This exception is raised if the application expects a version number to be
+    present in the config file but does not find one.
+    """
     pass
 
 
 try:
     # Python 2
     class ConfigResolverBase(object, SafeConfigParser):
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
         pass
 except TypeError:
     # Python 3
     class ConfigResolverBase(SafeConfigParser):
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
         pass
 
 
