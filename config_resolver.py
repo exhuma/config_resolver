@@ -60,7 +60,7 @@ class Config(ConfigResolverBase):
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
-        ConfigResolverBase.__init__(self, **kwargs)
+        SafeConfigParser.__init__(self, **kwargs)
         self.version = version and StrictVersion(version) or None
         self.config = None
         self.group_name = group_name
@@ -88,7 +88,10 @@ class Config(ConfigResolverBase):
         config_dirs = getenv('XDG_CONFIG_DIRS', '')
         if config_dirs:
             LOG.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
-            return list(reversed(config_dirs.split(':')))
+            output = []
+            for path in reversed(config_dirs.split(':')):
+                output.append(join(path, self.group_name, self.app_name))
+            return output
         else:
             return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
 
@@ -100,7 +103,8 @@ class Config(ConfigResolverBase):
         config_home = getenv('XDG_CONFIG_HOME', '')
         if config_home:
             LOG.debug('XDG_CONFIG_HOME is set to %r', config_home)
-            return expanduser(config_home)
+            return expanduser(join(config_home, self.group_name,
+                                   self.app_name))
         else:
             return expanduser('~/.config/%s/%s' % (self.group_name,
                                                    self.app_name))
@@ -133,9 +137,11 @@ class Config(ConfigResolverBase):
         settings from the first one.
         """
         # default search path
-        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
-                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                join(getcwd(), '.{}'.format(self.group_name), self.app_name)]
+        path = (['/etc/%s/%s' % (self.group_name, self.app_name)] +
+                self.get_xdg_dirs() +
+                [expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
+                 self.get_xdg_home(),
+                 join(getcwd(), '.{}'.format(self.group_name), self.app_name)])
 
         # If a path was passed directly to this instance, override the path.
         if self.search_path:

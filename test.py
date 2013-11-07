@@ -30,11 +30,13 @@ def environment(**kwargs):
         else:
             old_values[key] = os.environ[key]
         os.environ[key] = kwargs[key]
-    yield
-    for key in old_values:
-        os.environ[key] = old_values[key]
-    for key in nonexistent:
-        os.environ.pop(key)
+    try:
+        yield
+    finally:
+        for key in old_values:
+            os.environ[key] = old_values[key]
+        for key in nonexistent:
+            os.environ.pop(key)
 
 
 class TestableHandler(logging.Handler):
@@ -98,9 +100,13 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_name(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        cfg = Config('hello', 'world')
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
+                    '/etc/xdg/hello/world/test.ini',
                     expanduser('~/.hello/world/test.ini'),
+                    expanduser('~/.config/hello/world/test.ini'),
                     '{}/.hello/world/test.ini'.format(os.getcwd())]
         self.assertEqual(
             cfg.active_path,
@@ -148,9 +154,13 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_add(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        cfg = Config('hello', 'world')
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
+                    '/etc/xdg/hello/world/app.ini',
                     expanduser('~/.hello/world/app.ini'),
+                    expanduser('~/.config/hello/world/app.ini'),
                     '{}/.hello/world/app.ini'.format(os.getcwd()),
                     'testdata/app.ini',
                     'testdata/a/app.ini', 'testdata/b/app.ini']
@@ -265,7 +275,8 @@ class FunctionalityTests(unittest.TestCase):
         self.assertTrue(result)
 
     def test_xdg_config_dirs(self):
-        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2'):
+        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
+                         XDG_CONFIG_HOME=''):
             cfg = Config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
@@ -277,7 +288,8 @@ class FunctionalityTests(unittest.TestCase):
             ], cfg.active_path)
 
     def test_xdg_empty_config_dirs(self):
-        with environment(XDG_CONFIG_DIRS=''):
+        with environment(XDG_CONFIG_DIRS='',
+                         XDG_CONFIG_HOME=''):
             cfg = Config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
@@ -288,7 +300,8 @@ class FunctionalityTests(unittest.TestCase):
             ], cfg.active_path)
 
     def test_xdg_config_home(self):
-        with environment(XDG_CONFIG_HOME='/path/to/config/home'):
+        with environment(XDG_CONFIG_HOME='/path/to/config/home',
+                         XDG_CONFIG_DIRS=''):
             cfg = Config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
@@ -299,7 +312,8 @@ class FunctionalityTests(unittest.TestCase):
             ], cfg.active_path)
 
     def test_xdg_empty_config_home(self):
-        with environment(XDG_CONFIG_HOME=''):
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
             cfg = Config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
