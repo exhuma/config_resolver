@@ -1,18 +1,48 @@
+from contextlib import contextmanager
 import unittest
 import logging
 import os
-from os.path import expanduser, join
+from os.path import expanduser, join, abspath
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
+try:
+    from mock import patch
+    have_mock = True
+except ImportError:
+    have_mock = False
+
 from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
     IncompatibleVersion)
+
+
+@contextmanager
+def environment(**kwargs):
+    """
+    Context manager to tempolrarily change environment variables. On exit all
+    variables are set to their original value.
+    """
+    old_values = {}
+    nonexistent = set()
+    for key in kwargs:
+        if key not in os.environ:
+            nonexistent.add(key)
+        else:
+            old_values[key] = os.environ[key]
+        os.environ[key] = kwargs[key]
+    try:
+        yield
+    finally:
+        for key in old_values:
+            os.environ[key] = old_values[key]
+        for key in nonexistent:
+            os.environ.pop(key)
 
 
 class TestableHandler(logging.Handler):
@@ -76,9 +106,13 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_name(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        cfg = Config('hello', 'world')
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
+                    '/etc/xdg/hello/world/test.ini',
                     expanduser('~/.hello/world/test.ini'),
+                    expanduser('~/.config/hello/world/test.ini'),
                     '{}/.hello/world/test.ini'.format(os.getcwd())]
         self.assertEqual(
             cfg.active_path,
@@ -126,9 +160,13 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_add(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        cfg = Config('hello', 'world')
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
+                    '/etc/xdg/hello/world/app.ini',
                     expanduser('~/.hello/world/app.ini'),
+                    expanduser('~/.config/hello/world/app.ini'),
                     '{}/.hello/world/app.ini'.format(os.getcwd()),
                     'testdata/app.ini',
                     'testdata/a/app.ini', 'testdata/b/app.ini']
@@ -241,6 +279,97 @@ class FunctionalityTests(unittest.TestCase):
             logging.WARNING,
             'Mismatching minor version number')
         self.assertTrue(result)
+
+    def test_xdg_config_dirs(self):
+        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
+                         XDG_CONFIG_HOME=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/xdgpath2/foo/bar/app.ini',
+                '/xdgpath1/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_empty_config_dirs(self):
+        with environment(XDG_CONFIG_DIRS='',
+                         XDG_CONFIG_HOME=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_config_home(self):
+        with environment(XDG_CONFIG_HOME='/path/to/config/home',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                '/path/to/config/home/foo/bar/app.ini',
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_xdg_empty_config_home(self):
+        with environment(XDG_CONFIG_HOME='',
+                         XDG_CONFIG_DIRS=''):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/etc/xdg/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                expanduser('~/.config/foo/bar/app.ini'),
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    def test_both_xdg_variables(self):
+        with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
+                         XDG_CONFIG_HOME='/xdg/config/home'):
+            cfg = Config('foo', 'bar')
+            self.assertEqual([
+                '/etc/foo/bar/app.ini',
+                '/xdgpath2/foo/bar/app.ini',
+                '/xdgpath1/foo/bar/app.ini',
+                expanduser('~/.foo/bar/app.ini'),
+                '/xdg/config/home/foo/bar/app.ini',
+                abspath('.foo/bar/app.ini')
+            ], cfg.active_path)
+
+    @unittest.skipUnless(have_mock, "mock module is not available")
+    def test_xdg_deprecation(self):
+        """
+        ~/.group/app/app.ini should issue a deprecation warning.
+
+        NOTE: This is a *user* warning. Not a developer warning! So we'll use
+        the logging module instead of the warnings module!
+        """
+        with patch('config_resolver.Config.check_file') as checker_mock:
+            checker_mock.return_value = (True, "")
+            logger = logging.getLogger('config_resolver')
+            catcher = TestableHandler()
+            logger.addHandler(catcher)
+            Config('hello', 'world')
+            expected_message = (
+                "DEPRECATION WARNING: The file '{home}/.hello/world/app.ini' "
+                "was loaded. The XDG Basedir standard requires this file to "
+                "be in '{home}/.config/hello/world/app.ini'! This location "
+                "will no longer be parsed in a future version of "
+                "config_resolver! You can already (and should) move the "
+                "file!".format(
+                    home=expanduser("~")))
+            result = catcher.contains(
+                'config_resolver',
+                logging.WARNING,
+                expected_message)
+            self.assertTrue(result, "Expected log message: {!r} not found in "
+                            "logger!".format(expected_message))
 
 
 if __name__ == '__main__':

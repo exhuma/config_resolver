@@ -69,7 +69,45 @@ class Config(ConfigResolverBase):
         self.filename = filename
         self.loaded_files = []
         self.active_path = []
+        self.env_path_name = "%s_%s_PATH" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+        self.env_filename_name = "%s_%s_FILENAME" % (
+            self.group_name.upper(),
+            self.app_name.upper())
         self.load(require_load=require_load)
+
+    def get_xdg_dirs(self):
+        """
+        Returns a list of paths specified by the XDG_CONFIG_DIRS environment
+        variable or the appropriate default.
+
+        The list is sorted by precedence, with the most important item coming
+        *last* (required by the existing config_resolver logic).
+        """
+        config_dirs = getenv('XDG_CONFIG_DIRS', '')
+        if config_dirs:
+            LOG.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
+            output = []
+            for path in reversed(config_dirs.split(':')):
+                output.append(join(path, self.group_name, self.app_name))
+            return output
+        else:
+            return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
+
+    def get_xdg_home(self):
+        """
+        Returns the value specified in the XDG_CONFIG_HOME environment variable
+        or the appropriate default.
+        """
+        config_home = getenv('XDG_CONFIG_HOME', '')
+        if config_home:
+            LOG.debug('XDG_CONFIG_HOME is set to %r', config_home)
+            return expanduser(join(config_home, self.group_name,
+                                   self.app_name))
+        else:
+            return expanduser('~/.config/%s/%s' % (self.group_name,
+                                                   self.app_name))
 
     def _effective_filename(self):
         """
@@ -99,9 +137,11 @@ class Config(ConfigResolverBase):
         settings from the first one.
         """
         # default search path
-        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
-                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                join(getcwd(), '.{}'.format(self.group_name), self.app_name)]
+        path = (['/etc/%s/%s' % (self.group_name, self.app_name)] +
+                self.get_xdg_dirs() +
+                [expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
+                 self.get_xdg_home(),
+                 join(getcwd(), '.{}'.format(self.group_name), self.app_name)])
 
         # If a path was passed directly to this instance, override the path.
         if self.search_path:
@@ -125,18 +165,6 @@ class Config(ConfigResolverBase):
             path = env_path.split(pathsep)
 
         return path
-
-    @property
-    def env_filename_name(self):
-        return "%s_%s_FILENAME" % (
-            self.group_name.upper(),
-            self.app_name.upper())
-
-    @property
-    def env_path_name(self):
-        return "%s_%s_PATH" % (
-            self.group_name.upper(),
-            self.app_name.upper())
 
     def check_file(self, filename):
         """
@@ -225,6 +253,16 @@ class Config(ConfigResolverBase):
                 LOG.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
+                if conf_name == expanduser("~/.%s/%s/%s" % (
+                        self.group_name, self.app_name, self.filename)):
+                    LOG.warning(
+                        "DEPRECATION WARNING: The file "
+                        "'%s/.hello/world/app.ini' was loaded. The XDG "
+                        "Basedir standard requires this file to be in "
+                        "'%s/.config/hello/world/app.ini'! This location "
+                        "will no longer be parsed in a future version of "
+                        "config_resolver! You can already (and should) move "
+                        "the file!", expanduser("~"), expanduser("~"))
                 self.loaded_files.append(conf_name)
             else:
                 LOG.warning('Unable to read %r (%s)' % (conf_name, cause))
