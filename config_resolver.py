@@ -253,6 +253,16 @@ class Config(ConfigResolverBase):
                 LOG.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
+                if conf_name == expanduser("~/.%s/%s/%s" % (
+                        self.group_name, self.app_name, self.filename)):
+                    LOG.warning(
+                        "DEPRECATION WARNING: The file "
+                        "'%s/.hello/world/app.ini' was loaded. The XDG "
+                        "Basedir standard requires this file to be in "
+                        "'%s/.config/hello/world/app.ini'! This location "
+                        "will no longer be parsed in a future version of "
+                        "config_resolver! You can already (and should) move "
+                        "the file!", expanduser("~"), expanduser("~"))
                 self.loaded_files.append(conf_name)
             else:
                 LOG.warning('Unable to read %r (%s)' % (conf_name, cause))

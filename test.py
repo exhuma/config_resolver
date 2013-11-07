@@ -9,6 +9,12 @@ try:
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
+try:
+    from mock import patch
+    have_mock = True
+except ImportError:
+    have_mock = False
+
 from config_resolver import (
     Config,
     SecuredConfig,
@@ -335,6 +341,35 @@ class FunctionalityTests(unittest.TestCase):
                 '/xdg/config/home/foo/bar/app.ini',
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
+
+    @unittest.skipUnless(have_mock, "mock module is not available")
+    def test_xdg_deprecation(self):
+        """
+        ~/.group/app/app.ini should issue a deprecation warning.
+
+        NOTE: This is a *user* warning. Not a developer warning! So we'll use
+        the logging module instead of the warnings module!
+        """
+        with patch('config_resolver.Config.check_file') as checker_mock:
+            checker_mock.return_value = (True, "")
+            logger = logging.getLogger('config_resolver')
+            catcher = TestableHandler()
+            logger.addHandler(catcher)
+            Config('hello', 'world')
+            expected_message = (
+                "DEPRECATION WARNING: The file '{home}/.hello/world/app.ini' "
+                "was loaded. The XDG Basedir standard requires this file to "
+                "be in '{home}/.config/hello/world/app.ini'! This location "
+                "will no longer be parsed in a future version of "
+                "config_resolver! You can already (and should) move the "
+                "file!".format(
+                    home=expanduser("~")))
+            result = catcher.contains(
+                'config_resolver',
+                logging.WARNING,
+                expected_message)
+            self.assertTrue(result, "Expected log message: {!r} not found in "
+                            "logger!".format(expected_message))
 
 
 if __name__ == '__main__':
