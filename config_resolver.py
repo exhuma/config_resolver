@@ -222,16 +222,24 @@ class Config(ConfigResolverBase):
 
         :param section: The config file section.
         :param option: The option name.
+        :param kwargs: These keyword args are passed through to
+                       :py:meth:`configparser.SafeConfigParser.get`.
         """
+        if "default" in kwargs:
+            default = kwargs.pop("default")
+            have_default = True
+        else:
+            have_default = False
+
         try:
-            value = SafeConfigParser.get(self, section, option)
+            value = SafeConfigParser.get(self, section, option, **kwargs)
             return value
         except (NoSectionError, NoOptionError) as exc:
-            if "default" in kwargs:
+            if have_default:
                 LOG.debug("{0}: Returning default value {1!r}".format(
                     exc,
-                    kwargs['default']))
-                return kwargs['default']
+                    default))
+                return default
             else:
                 raise
 
