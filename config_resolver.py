@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.0.0'
+__version__ = '4.1.0'
 
 LOG = logging.getLogger(__name__)
 
