@@ -24,9 +24,9 @@ Description / Usage
 
 The module provides two main classes:
 
-* :py:class:`config_resolver.Config`: This is the default class.
-* :py:class:`config_resolver.SecuredConfig`: This is a subclass of
-  :py:class:`config_resolver.Config` which refuses to load files which a
+* :py:class:`~config_resolver.Config`: This is the default class.
+* :py:class:`~config_resolver.SecuredConfig`: This is a subclass of
+  :py:class:`~config_resolver.Config` which refuses to load files which a
   readable by other people than the owner.
 
 The simple usage for both is identical. The only difference is the above
@@ -38,12 +38,38 @@ mentioned decision to load files or not::
 This will look for config files in (in that order):
 
 * ``/etc/acmecorp/bird_feeder/app.ini``
-* ``~/.acmecorp/bird_feeder/app.ini``
+* ``/etc/xdg/acmecorp/bird_feeder/app.ini``
+* ``~/.acmecorp/bird_feeder/app.ini`` -- This will be deprecated (no longer
+  loaded) in ``config_resolver 5.0``
+* ``~/.config/acmecorp/bird_feeder/app.ini``
 * ``./.acmecorp/bird_feeder/app.ini``
 
 If all files exist, one which is loaded later, will override the values of an
 earlier file. No values will be removed, this means you can put system-wide
-defaults in ``/etc`` and specialise from there.
+defaults in ``/etc`` and specialise/override from there.
+
+The Freedesktop XDG standard
+----------------------------
+
+`freedesktop.org`_ standardises the location of configuration files in the `XDG
+specification`_ Since version 4.1.0, ``config_resolver`` reads these paths as
+well, and honors the defined environment variables. To ensure backwards
+compatibility, those paths have only been added to the resolution order. They
+have a higher precedence than the old locations though. So the following
+applies:
+
+============================== =======================
+XDG item                        overrides
+============================== =======================
+``/etc/xdg/<group>/<app>``      ``/etc/<group>/<app>``
+``~/.config/<group>/</app>``    ``~/.<group>/<app>``
+``$XDG_DATA_HOME``              ``$GROUP_APP_PATH``
+``$XDG_CONFIG_DIRS``            ``$GROUP_APP_PATH``
+============================== =======================
+
+.. tip:: If a config file is found at ``~/.<group>/<app>``, a log message with
+         a warning is issued since config_resolver 4.1.0 encouraging the
+         end-user to move the config file to ``~/.config/<group>/<app>``.
 
 Files are parsed using the default Python :py:class:`configparser.ConfigParser`
 (i.e. ``ini`` files).
@@ -122,27 +148,37 @@ By the end-user
 The end-user has access to two environment variables:
 
 * ``<GROUP_NAME>_<APP_NAME>_PATH`` overrides the default search path.
-* ``<GROUP_NAME>_<APP_NAME>_FILENAME`` overrides the default basename.
-
-.. note::
-    If an application uses more than one config instance, the environment
-    variable will override all of them! In that case, it is recommended to only
-    override the "``_PATH``" variable. It should prove sufficient.
+* ``XDG_CONFIG_HOME`` overrides the path considered as "home" locations for
+  config files (default=``~/.config``)
+* ``XDG_CONFIG_DIRS`` overrides additional path elements as recommended by
+  `the freedesktop.org XDG basedir spec`_. Paths are separated by ``:`` and are
+  sorted with descending precedence (leftmost is the most important one).
+* ``<GROUP_NAME>_<APP_NAME>_FILENAME`` overrides the default basename of the
+  config file (default=``app.ini``).
 
 
 Logging
 ~~~~~~~
 
-All operations are logged using the default :py:mod:`logging` package. The log
-messages include the absolute names of the loaded files. If a file is not
-loadable, a ``WARNING`` message is emitted. It also contains a couple of
-``DEBUG`` messages. If you want to see those messages on-screen you could do
-the following::
+All operations are logged using the default :py:mod:`logging` package with a
+logger with the name ``config_resolver``. All operational logs (opening/reading
+file) are logged with the ``INFO`` level. The log messages include the absolute
+names of the loaded files. If a file is not loadable, a ``WARNING`` message is
+emitted. It also contains a couple of ``DEBUG`` messages. If you want to see
+those messages on-screen you could do the following::
 
     import logging
     from config_resolver import Config
     logging.basicConfig(level=logging.DEBUG)
     conf = Config('mycompany', 'myapplication')
+
+If you want to use the ``INFO`` level in your application, but silence only the
+config_resolver logs, add the following to your code::
+
+    logging.getLogger('config_resolver').setLevel(logging.WARNING)
+
+More detailed information about logging is out of the scope of this document.
+Consider reading the `logging tutorial`_ of the official Python docs.
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
@@ -151,28 +187,36 @@ The resolver can also be manipulated using environment variables to allow
 different values for different running instances. The variable names are all
 upper-case and are prefixed with both group- and application-name.
 
-<group_name>_<app_name>_PATH
+``<group_name>_<app_name>_PATH``
     The search path for config files. You can specify multiple paths by
     separating it by the system's path separator default (``:`` on Linux).
 
     If the path is prefixed with ``+``, then the path elements are *appended*
     to the default search path.
 
-<group_name>_<app_name>_FILENAME
+``<group_name>_<app_name>_FILENAME``
     The file name of the config file. Note that this should *not* be given with
     leading path elements. It should simply be a file basename (f.ex.:
     ``my_config.ini``)
+
+``XDG_CONFIG_HOME`` and ``XDG_CONFIG_DIRS``
+    See the `XDG specification`_
+
 
 Difference to ConfigParser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There is one **major** difference to the default Python
-:py:class:`configparser.ConfigParser`: the ``.get`` method accepts a "default"
-parameter. If specified, that value is returned if
-:py:class:`configparser.ConfigParser` does not have a value.  I find the
-support for default values in the core library's
-:py:class:`configparser.ConfigParser` lacking, you cannot have two options with
-the same name in two sections with *different* values.  Imagine the following::
+:py:class:`~configparser.ConfigParser`: the
+:py:meth:`~config_resolver.Config.get` method accepts a "default" parameter. If
+specified, that value is returned in case
+:py:class:`~configparser.ConfigParser` does not return a value. Remember that
+the ``ConfigParser`` instance supports defaults as well if specified in the
+constructor.
+
+Using the ``default`` parameter on :py:meth:`~config_resolver.Config.get`, you
+can now have two options with the same name in two sections with *different*
+values.  Imagine the following::
 
     [database1]
     dsn=sqlite:///tmp/db.sqlite3
@@ -180,20 +224,24 @@ the same name in two sections with *different* values.  Imagine the following::
     [database2]
     dsn=sqlite:///tmp/db2.sqlite3
 
-In the core :py:class:`configparser.ConfigParser` you could *not* specify two
-different default values!
+In the core :py:class:`~configparser.ConfigParser` you could *not* specify two
+different default values! The ``default`` parameter makes this possible.
 
 .. note::
-    The core :py:class:`configparser.ConfigParser` default mechanism still
-    takes precedence!
+    *AGAIN:* The core :py:class:`~configparser.ConfigParser` default mechanism
+    still takes precedence!
 
 Debugging
 ---------
 
-Creating the config object will not raise an error (except if asked to do so).
-Instead it will always return a valid, (but possibly empty)
-:py:class:`config_resolver.Config` instance. So errors can be hard to see
-sometimes.
+Creating an instance of :py:class:`~config_resolver.Config` will not raise an
+error (except if explicitly asked to do so).  Instead it will always return a
+valid, (but possibly empty) instance. So errors can be hard to see sometimes.
+
+The idea behind this, is to encourage you to have sensible default values, so
+that the application can run, even without configuration. For
+"development-time" exceptions, consider calling
+:py:meth:`~config_resolver.Config.get` without a default value.
 
 Your first stop should be to configure logging and look at the emitted
 messages.
@@ -263,3 +311,9 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+.. _freedesktop.org: http://www.freedesktop.org
+.. _the freedesktop.org XDG basedir spec:
+.. _XDG specification: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+.. _logging tutorial: http://docs.python.org/3.2/howto/logging.html#logging-basic-tutorial

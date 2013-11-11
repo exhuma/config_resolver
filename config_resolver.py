@@ -1,3 +1,9 @@
+"""
+config_resolver provides a ``Config`` class, which looks up common locations
+for config files and loads them if found. It provides a framework independed
+way of handling configuration files. Additional care has been taken to allow
+the end-user of the application to override this lookup process.
+"""
 try:
     from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -7,29 +13,44 @@ from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
 import stat
-from warnings import warn
 from distutils.version import StrictVersion
 
-__version__ = '4.0.0'
+__version__ = '4.1.0'
 
 LOG = logging.getLogger(__name__)
 
 
 class IncompatibleVersion(Exception):
+    """
+    This exception is raised if a config file is loaded which has a different
+    major version number than expected by the application.
+    """
     pass
 
 
 class NoVersionError(Exception):
+    """
+    This exception is raised if the application expects a version number to be
+    present in the config file but does not find one.
+    """
     pass
 
 
 try:
     # Python 2
     class ConfigResolverBase(object, SafeConfigParser):
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
         pass
 except TypeError:
     # Python 3
     class ConfigResolverBase(SafeConfigParser):
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
         pass
 
 
@@ -54,7 +75,8 @@ class Config(ConfigResolverBase):
         versioned config instance. A versioned instance may raise a
         :py:exc:`.IncompatibleVersion` exception if the major version differs
         from the one found in the config file. If left to the default, no
-        version checking is performed.
+        version checking is performed. Version numbers are parsed using
+        :py:class:`distutils.version.StrictVersion`
     """
 
     def __init__(self, group_name, app_name, search_path=None,
@@ -69,7 +91,45 @@ class Config(ConfigResolverBase):
         self.filename = filename
         self.loaded_files = []
         self.active_path = []
+        self.env_path_name = "%s_%s_PATH" % (
+            self.group_name.upper(),
+            self.app_name.upper())
+        self.env_filename_name = "%s_%s_FILENAME" % (
+            self.group_name.upper(),
+            self.app_name.upper())
         self.load(require_load=require_load)
+
+    def get_xdg_dirs(self):
+        """
+        Returns a list of paths specified by the XDG_CONFIG_DIRS environment
+        variable or the appropriate default.
+
+        The list is sorted by precedence, with the most important item coming
+        *last* (required by the existing config_resolver logic).
+        """
+        config_dirs = getenv('XDG_CONFIG_DIRS', '')
+        if config_dirs:
+            LOG.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
+            output = []
+            for path in reversed(config_dirs.split(':')):
+                output.append(join(path, self.group_name, self.app_name))
+            return output
+        else:
+            return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
+
+    def get_xdg_home(self):
+        """
+        Returns the value specified in the XDG_CONFIG_HOME environment variable
+        or the appropriate default.
+        """
+        config_home = getenv('XDG_CONFIG_HOME', '')
+        if config_home:
+            LOG.debug('XDG_CONFIG_HOME is set to %r', config_home)
+            return expanduser(join(config_home, self.group_name,
+                                   self.app_name))
+        else:
+            return expanduser('~/.config/%s/%s' % (self.group_name,
+                                                   self.app_name))
 
     def _effective_filename(self):
         """
@@ -99,9 +159,11 @@ class Config(ConfigResolverBase):
         settings from the first one.
         """
         # default search path
-        path = ['/etc/%s/%s' % (self.group_name, self.app_name),
-                expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                join(getcwd(), '.{}'.format(self.group_name), self.app_name)]
+        path = (['/etc/%s/%s' % (self.group_name, self.app_name)] +
+                self.get_xdg_dirs() +
+                [expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
+                 self.get_xdg_home(),
+                 join(getcwd(), '.{}'.format(self.group_name), self.app_name)])
 
         # If a path was passed directly to this instance, override the path.
         if self.search_path:
@@ -125,18 +187,6 @@ class Config(ConfigResolverBase):
             path = env_path.split(pathsep)
 
         return path
-
-    @property
-    def env_filename_name(self):
-        return "%s_%s_FILENAME" % (
-            self.group_name.upper(),
-            self.app_name.upper())
-
-    @property
-    def env_path_name(self):
-        return "%s_%s_PATH" % (
-            self.group_name.upper(),
-            self.app_name.upper())
 
     def check_file(self, filename):
         """
@@ -168,21 +218,29 @@ class Config(ConfigResolverBase):
         ``section2.test``. Using the default on the ``get`` call gives you more
         fine-grained control over this.
 
-        Also note, that if a default value has to be used, it will be logged
-        with level ``logging.DEBUG``.
+        Also note, that if a default value was used, it will be logged with
+        level ``logging.DEBUG``.
 
         :param section: The config file section.
         :param option: The option name.
+        :param kwargs: These keyword args are passed through to
+                       :py:meth:`configparser.SafeConfigParser.get`.
         """
+        if "default" in kwargs:
+            default = kwargs.pop("default")
+            have_default = True
+        else:
+            have_default = False
+
         try:
-            value = SafeConfigParser.get(self, section, option)
+            value = SafeConfigParser.get(self, section, option, **kwargs)
             return value
         except (NoSectionError, NoOptionError) as exc:
-            if "default" in kwargs:
+            if have_default:
                 LOG.debug("{0}: Returning default value {1!r}".format(
                     exc,
-                    kwargs['default']))
-                return kwargs['default']
+                    default))
+                return default
             else:
                 raise
 
@@ -225,6 +283,16 @@ class Config(ConfigResolverBase):
                 LOG.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
+                if conf_name == expanduser("~/.%s/%s/%s" % (
+                        self.group_name, self.app_name, self.filename)):
+                    LOG.warning(
+                        "DEPRECATION WARNING: The file "
+                        "'%s/.hello/world/app.ini' was loaded. The XDG "
+                        "Basedir standard requires this file to be in "
+                        "'%s/.config/hello/world/app.ini'! This location "
+                        "will no longer be parsed in a future version of "
+                        "config_resolver! You can already (and should) move "
+                        "the file!", expanduser("~"), expanduser("~"))
                 self.loaded_files.append(conf_name)
             else:
                 LOG.warning('Unable to read %r (%s)' % (conf_name, cause))

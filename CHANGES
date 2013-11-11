@@ -1,3 +1,14 @@
+Release 4.1.0
+-------------
+
+Features added
+~~~~~~~~~~~~~~
+
+* XDG Basedir support
+
+  ``config_resolver`` will now search in the folders/names defined in the `XDG
+  specification`_.
+
 Release 4.0.0
 -------------
 
@@ -93,5 +104,7 @@ Features added
 
 * Changelog added
 
+
+.. _XDG specification: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 .. vim: set ft=rst :
