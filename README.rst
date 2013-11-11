@@ -14,10 +14,15 @@ PyPI
 Rationale
 ~~~~~~~~~
 
-Configuration values are usually found on well defined locations. On Linux
-systems this is usually ``/etc`` or the home folder. The code for finding these
-config files is always the same. But finding config files can be more
-interesting than that:
+Many of the larger frameworks (not only web frameworks) offer their own
+configuration management. But it looks different everywhere. Both in code and
+in usage later on. Additionally, the operating system usually has some default,
+predictable place to look for configuration values. On Linux, this is ``/etc``
+and the `XDG Base Dir Spec
+<http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>`_.
+
+The code for finding these config files is always the same. But finding config
+files can be more interesting than that:
 
 * If config files contain passwords, the application should issue appropriate
   warnings if it encounters an insecure file and refuse to load it.
@@ -26,13 +31,18 @@ interesting than that:
   If an application is upgraded and expects new values to exist in an old
   version file, it should notify the user.
 
-* It should be possible to override the configuration on a per installed
-  instance, even per-execution.
+* It should be possible to override the configuration per installed instance,
+  even per execution.
 
 ``config_resolver`` tackles all these challenges in a simple-to-use drop-in
 module. The module uses no additional external modules (no additional
-dependencies, pure Python).
+dependencies, pure Python) so it can be used in any application without adding
+unnecessary bloat.
 
-Additionally, the existing "default values" mechanisms in Python is broken, in
-that cannot have two different default values for the same variable name in two
-different sections.
+One last thing that ``config_resolver`` provides, is a better handling of
+default values than instances of ``SafeConfigParser`` of the standard library.
+The stdlib config parser can only specify defaults for options without
+associating them to a section! This means that you cannot have two options with
+the same name in multiple sections with different default values.
+``config_resolver`` handles default values at the time you call ``.get()``,
+which makes it independent of the section.
