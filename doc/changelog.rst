@@ -1,3 +1,15 @@
+Release 4.1.0
+-------------
+
+Features added
+~~~~~~~~~~~~~~
+
+* XDG Basedir support
+
+  ``config_resolver`` will now search in the folders/names defined in the `XDG
+  specification`_.
+
+
 Release 4.0.0
 -------------
 
