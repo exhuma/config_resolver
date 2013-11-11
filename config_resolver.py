@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.0.0'
+__version__ = '4.1.0'
 
 LOG = logging.getLogger(__name__)
 
@@ -75,7 +75,8 @@ class Config(ConfigResolverBase):
         versioned config instance. A versioned instance may raise a
         :py:exc:`.IncompatibleVersion` exception if the major version differs
         from the one found in the config file. If left to the default, no
-        version checking is performed.
+        version checking is performed. Version numbers are parsed using
+        :py:class:`distutils.version.StrictVersion`
     """
 
     def __init__(self, group_name, app_name, search_path=None,
@@ -217,21 +218,29 @@ class Config(ConfigResolverBase):
         ``section2.test``. Using the default on the ``get`` call gives you more
         fine-grained control over this.
 
-        Also note, that if a default value has to be used, it will be logged
-        with level ``logging.DEBUG``.
+        Also note, that if a default value was used, it will be logged with
+        level ``logging.DEBUG``.
 
         :param section: The config file section.
         :param option: The option name.
+        :param kwargs: These keyword args are passed through to
+                       :py:meth:`configparser.SafeConfigParser.get`.
         """
+        if "default" in kwargs:
+            default = kwargs.pop("default")
+            have_default = True
+        else:
+            have_default = False
+
         try:
-            value = SafeConfigParser.get(self, section, option)
+            value = SafeConfigParser.get(self, section, option, **kwargs)
             return value
         except (NoSectionError, NoOptionError) as exc:
-            if "default" in kwargs:
+            if have_default:
                 LOG.debug("{0}: Returning default value {1!r}".format(
                     exc,
-                    kwargs['default']))
-                return kwargs['default']
+                    default))
+                return default
             else:
                 raise
 
