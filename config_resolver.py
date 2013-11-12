@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.1.1'
+__version__ = '4.1.2'
 
 LOG = logging.getLogger(__name__)
 
@@ -146,8 +146,8 @@ class Config(ConfigResolverBase):
         env_filename = getenv(self.env_filename_name)
         if env_filename:
             LOG.info('Configuration filename was overridden with {0!r} by the '
-                     'environment variable HELLO_WORLD_FILENAME.'.format(
-                         env_filename))
+                     'environment variable {1}.'.format(
+                         env_filename, self.env_filename_name))
             config_filename = env_filename
 
         return config_filename
@@ -176,7 +176,8 @@ class Config(ConfigResolverBase):
             # If prefixed with a '+', append the path elements
             additional_paths = env_path[1:].split(pathsep)
             LOG.info('Search path extended with {0!r} by the environment '
-                     'variable HELLO_WORLD_PATH.'.format(additional_paths))
+                     'variable {1}.'.format(additional_paths,
+                                           self.env_path_name))
             path.extend(additional_paths)
         elif env_path:
             # Otherwise, override again. This takes absolute precedence.
@@ -287,15 +288,17 @@ class Config(ConfigResolverBase):
                         self.group_name, self.app_name, self.filename)):
                     LOG.warning(
                         "DEPRECATION WARNING: The file "
-                        "'%s/.hello/world/app.ini' was loaded. The XDG "
+                        "'%s/.%s/%s/app.ini' was loaded. The XDG "
                         "Basedir standard requires this file to be in "
-                        "'%s/.config/hello/world/app.ini'! This location "
+                        "'%s/.config/%s/%s/app.ini'! This location "
                         "will no longer be parsed in a future version of "
                         "config_resolver! You can already (and should) move "
-                        "the file!", expanduser("~"), expanduser("~"))
+                        "the file!", expanduser("~"), self.group_name,
+                        self.app_name, expanduser("~"), self.group_name,
+                        self.app_name)
                 self.loaded_files.append(conf_name)
             else:
-                LOG.warning('Unable to read %r (%s)' % (conf_name, cause))
+                LOG.debug('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             LOG.warning("No config file named %s found! Search path was %r" % (
@@ -359,6 +362,8 @@ class SecuredConfig(Config):
 
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
-            return False, "File is not secure enough. Change it's mode to 600"
+            msg = "File %r is not secure enough. Change it's mode to 600"
+            LOG.warning(msg, filename)
+            return False, msg
         else:
             return True, ''
