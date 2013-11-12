@@ -298,7 +298,7 @@ class Config(ConfigResolverBase):
                         self.app_name)
                 self.loaded_files.append(conf_name)
             else:
-                LOG.warning('Unable to read %r (%s)' % (conf_name, cause))
+                LOG.debug('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             LOG.warning("No config file named %s found! Search path was %r" % (
@@ -362,6 +362,8 @@ class SecuredConfig(Config):
 
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
-            return False, "File is not secure enough. Change it's mode to 600"
+            msg = "File %r is not secure enough. Change it's mode to 600"
+            LOG.warning(msg, filename)
+            return False, msg
         else:
             return True, ''
