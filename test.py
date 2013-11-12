@@ -229,8 +229,8 @@ class FunctionalityTests(unittest.TestCase):
         SecuredConfig('hello', 'world', filename='test.ini',
                       search_path='testdata')
         expected_message = (
-            "Unable to read 'testdata/test.ini' (File is not secure enough. "
-            "Change it's mode to 600)")
+            "File 'testdata/test.ini' is not secure enough. "
+            "Change it's mode to 600")
         result = catcher.contains(
             'config_resolver',
             logging.WARNING,
