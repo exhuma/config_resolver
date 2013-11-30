@@ -27,7 +27,7 @@ class PrefixFilter(object):
                       message.
     """
 
-    def __init__(self, prefix, separator=u' '):
+    def __init__(self, prefix, separator=' '):
         self._prefix = prefix
         self._separator = separator
 
