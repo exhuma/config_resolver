@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.1.2'
+__version__ = '4.2.0'
 
 
 class PrefixFilter(object):
@@ -27,7 +27,7 @@ class PrefixFilter(object):
                       message.
     """
 
-    def __init__(self, prefix, separator=u' '):
+    def __init__(self, prefix, separator=' '):
         self._prefix = prefix
         self._separator = separator
 
