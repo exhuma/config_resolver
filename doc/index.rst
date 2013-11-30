@@ -177,6 +177,15 @@ config_resolver logs, add the following to your code::
 
     logging.getLogger('config_resolver').setLevel(logging.WARNING)
 
+As of version 4.2.0, all log messages are prefixed with the group and
+application name. This helps identifying log messages if multiple packages in
+your application use ``config_resolver``. The prefix filter can be accessed via
+the instance member ``_prefix_filter`` if you want to change or remove it::
+
+    from config_resolver import Config
+    conf = Config('mycompany', 'myapplication')
+    print conf._prefix_filter
+
 More detailed information about logging is out of the scope of this document.
 Consider reading the `logging tutorial`_ of the official Python docs.
 
