@@ -17,7 +17,23 @@ from distutils.version import StrictVersion
 
 __version__ = '4.1.2'
 
-LOG = logging.getLogger(__name__)
+
+class PrefixFilter(object):
+    """
+    A logging filter which prefixes each message with a given text.
+
+    :param prefix: The log prefix.
+    :param separator: A string to put between the prefix and the original log
+                      message.
+    """
+
+    def __init__(self, prefix, separator=u' '):
+        self._prefix = prefix
+        self._separator = separator
+
+    def filter(self, record):
+        record.msg = self._separator.join([self._prefix, record.msg])
+        return True
 
 
 class IncompatibleVersion(Exception):
@@ -83,6 +99,10 @@ class Config(ConfigResolverBase):
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
+        self._log = logging.getLogger(__name__)
+        self._prefix_filter = PrefixFilter('group={}:app={}'.format(
+            group_name, app_name), separator=':')
+        self._log.addFilter(self._prefix_filter)
         self.version = version and StrictVersion(version) or None
         self.config = None
         self.group_name = group_name
@@ -109,7 +129,7 @@ class Config(ConfigResolverBase):
         """
         config_dirs = getenv('XDG_CONFIG_DIRS', '')
         if config_dirs:
-            LOG.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
+            self._log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
             output = []
             for path in reversed(config_dirs.split(':')):
                 output.append(join(path, self.group_name, self.app_name))
@@ -124,7 +144,7 @@ class Config(ConfigResolverBase):
         """
         config_home = getenv('XDG_CONFIG_HOME', '')
         if config_home:
-            LOG.debug('XDG_CONFIG_HOME is set to %r', config_home)
+            self._log.debug('XDG_CONFIG_HOME is set to %r', config_home)
             return expanduser(join(config_home, self.group_name,
                                    self.app_name))
         else:
@@ -145,9 +165,9 @@ class Config(ConfigResolverBase):
         # ... next, take the value from the environment
         env_filename = getenv(self.env_filename_name)
         if env_filename:
-            LOG.info('Configuration filename was overridden with {0!r} by the '
-                     'environment variable {1}.'.format(
-                         env_filename, self.env_filename_name))
+            self._log.info('Configuration filename was overridden with {0!r} '
+                           'by the environment variable {1}.'.format(
+                               env_filename, self.env_filename_name))
             config_filename = env_filename
 
         return config_filename
@@ -175,16 +195,16 @@ class Config(ConfigResolverBase):
         if env_path and env_path.startswith('+'):
             # If prefixed with a '+', append the path elements
             additional_paths = env_path[1:].split(pathsep)
-            LOG.info('Search path extended with {0!r} by the environment '
-                     'variable {1}.'.format(additional_paths,
-                                           self.env_path_name))
+            self._log.info('Search path extended with {0!r} by the '
+                           'environment variable {1}.'.format(
+                               additional_paths, self.env_path_name))
             path.extend(additional_paths)
         elif env_path:
             # Otherwise, override again. This takes absolute precedence.
-            LOG.info("Configuration search path was overridden with {0!r} by "
-                     "the environment variable {1!r}.".format(
-                         env_path,
-                         self.env_path_name))
+            self._log.info("Configuration search path was overridden with "
+                           "{0!r} by the environment variable {1!r}.".format(
+                               env_path,
+                               self.env_path_name))
             path = env_path.split(pathsep)
 
         return path
@@ -238,7 +258,7 @@ class Config(ConfigResolverBase):
             return value
         except (NoSectionError, NoOptionError) as exc:
             if have_default:
-                LOG.debug("{0}: Returning default value {1!r}".format(
+                self._log.debug("{0}: Returning default value {1!r}".format(
                     exc,
                     default))
                 return default
@@ -266,8 +286,8 @@ class Config(ConfigResolverBase):
 
         # only load the config if necessary (or explicitly requested)
         if self.config:  # pragma: no cover
-            LOG.debug('Returning cached config instance. Use '
-                      '``reload=True`` to avoid caching!')
+            self._log.debug('Returning cached config instance. Use '
+                            '``reload=True`` to avoid caching!')
             return
 
         path = self._effective_path()
@@ -281,12 +301,12 @@ class Config(ConfigResolverBase):
             readable, cause = self.check_file(conf_name)
             if readable:
                 self.read(conf_name)
-                LOG.info('%s config from %s' % (
+                self._log.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
                 if conf_name == expanduser("~/.%s/%s/%s" % (
                         self.group_name, self.app_name, self.filename)):
-                    LOG.warning(
+                    self._log.warning(
                         "DEPRECATION WARNING: The file "
                         "'%s/.%s/%s/app.ini' was loaded. The XDG "
                         "Basedir standard requires this file to be in "
@@ -298,11 +318,12 @@ class Config(ConfigResolverBase):
                         self.app_name)
                 self.loaded_files.append(conf_name)
             else:
-                LOG.debug('Unable to read %r (%s)' % (conf_name, cause))
+                self._log.debug('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
-            LOG.warning("No config file named %s found! Search path was %r" % (
-                config_filename, path))
+            self._log.warning(
+                "No config file named %s found! Search path was %r" % (
+                    config_filename, path))
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
@@ -335,10 +356,11 @@ class Config(ConfigResolverBase):
                                                  args[0]))
 
             if expected_minor != minor:
-                LOG.warning('Mismatching minor version number. '
-                            'Expected {!r}, got {!r} '
-                            'from filename {!r}'.format(expected_minor, minor,
-                                                        args[0]))
+                self._log.warning('Mismatching minor version number. '
+                                  'Expected {!r}, got {!r} '
+                                  'from filename {!r}'.format(expected_minor,
+                                                              minor,
+                                                              args[0]))
         else:
             raise NoVersionError(
                 "The config option 'meta.version' is missing in {}. The "
@@ -363,7 +385,7 @@ class SecuredConfig(Config):
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
             msg = "File %r is not secure enough. Change it's mode to 600"
-            LOG.warning(msg, filename)
+            self._log.warning(msg, filename)
             return False, msg
         else:
             return True, ''
