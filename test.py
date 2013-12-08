@@ -19,6 +19,7 @@ from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
+    PrefixFilter,
     IncompatibleVersion)
 
 
@@ -127,7 +128,7 @@ class AdvancedInitTest(unittest.TestCase):
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
         result = catcher.contains(
-            'config_resolver',
+            'config_resolver.hello.world',
             logging.INFO,
             msg)
         self.assertTrue(result, 'Expected log message {!r} not found in '
@@ -152,7 +153,7 @@ class AdvancedInitTest(unittest.TestCase):
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
         result = catcher.contains(
-            'config_resolver',
+            'config_resolver.hello.world',
             logging.INFO,
             msg)
         self.assertTrue(result, 'Expected log message {!r} not found in '
@@ -183,7 +184,7 @@ class AdvancedInitTest(unittest.TestCase):
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
         result = catcher.contains(
-            'config_resolver',
+            'config_resolver.hello.world',
             logging.INFO,
             msg)
         self.assertTrue(result, 'Expected log message {!r} not found in '
@@ -232,7 +233,7 @@ class FunctionalityTests(unittest.TestCase):
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
         result = catcher.contains(
-            'config_resolver',
+            'config_resolver.hello.world',
             logging.WARNING,
             expected_message)
         self.assertTrue(result, "Expected log message: {!r} not found in "
@@ -275,7 +276,7 @@ class FunctionalityTests(unittest.TestCase):
         Config('hello', 'world', search_path='testdata/versioned',
                version='2.0')
         result = catcher.contains(
-            'config_resolver',
+            'config_resolver.hello.world',
             logging.WARNING,
             'Mismatching minor version number')
         self.assertTrue(result)
@@ -370,6 +371,21 @@ class FunctionalityTests(unittest.TestCase):
                 expected_message)
             self.assertTrue(result, "Expected log message: {!r} not found in "
                             "logger!".format(expected_message))
+
+
+class Regressions(unittest.TestCase):
+
+    def setUp(self):
+        self.cfg = Config('hello', 'world', search_path='testdata')
+
+    def test_multiple_log_prefixes(self):
+        """
+        The new log message prefixes are multiplied if more than one config
+        instance is created!
+        """
+        Config('foo', 'bar')
+        cfg = Config('foo', 'bar')
+        self.assertEqual(len(cfg._log.filters), 1)
 
 
 if __name__ == '__main__':
