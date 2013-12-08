@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.2.0'
+__version__ = '4.2.1'
 
 
 class PrefixFilter(object):
