@@ -15,7 +15,7 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.2.0'
+__version__ = '4.2.1'
 
 
 class PrefixFilter(object):
@@ -30,6 +30,23 @@ class PrefixFilter(object):
     def __init__(self, prefix, separator=' '):
         self._prefix = prefix
         self._separator = separator
+
+    def __eq__(self, other):
+        # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
+        # when running the unit-tests through ``sniffer``. Does this have
+        # something to do with ``sniffer`` or is there something wrong with the
+        # code of ``config_resolver``? This is a workaround which is incorrect,
+        # and could in extreme cases cause problems if there was another
+        # filter with the exact same class name and with a ``_prefix`` and
+        # ``_separator`` member. They would wrongly be assumed to be the same.
+        # I'll assume this won't happen for now.
+        return (self.__class__.__name__ == other.__class__.__name__ and
+                other._prefix == self._prefix and
+                other._separator == self._separator)
+
+    def __repr__(self):
+        return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
+            self._prefix, self._separator)
 
     def filter(self, record):
         record.msg = self._separator.join([self._prefix, record.msg])
@@ -99,10 +116,14 @@ class Config(ConfigResolverBase):
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
         SafeConfigParser.__init__(self, **kwargs)
-        self._log = logging.getLogger(__name__)
+        self._log = logging.getLogger('{}.{}.{}'.format(__name__,
+                                                        group_name,
+                                                        app_name))
         self._prefix_filter = PrefixFilter('group={}:app={}'.format(
             group_name, app_name), separator=':')
-        self._log.addFilter(self._prefix_filter)
+        if self._prefix_filter not in self._log.filters:
+            self._log.addFilter(self._prefix_filter)
+
         self.version = version and StrictVersion(version) or None
         self.config = None
         self.group_name = group_name
