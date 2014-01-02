@@ -7,12 +7,13 @@ the end-user of the application to override this lookup process.
 try:
     from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 except ImportError:
-    from configparser import SafeConfigParser, NoOptionError, NoSectionError
+    from configparser import ConfigParser, NoOptionError, NoSectionError
 
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join
 import logging
 import stat
+import sys
 from distutils.version import StrictVersion
 
 __version__ = '4.2.2'
@@ -69,17 +70,17 @@ class NoVersionError(Exception):
     pass
 
 
-try:
+if sys.hexversion < 0x030000F0:
     # Python 2
-    class ConfigResolverBase(object, SafeConfigParser):
+    class ConfigResolverBase(SafeConfigParser, object):
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
         pass
-except TypeError:
+else:
     # Python 3
-    class ConfigResolverBase(SafeConfigParser):
+    class ConfigResolverBase(ConfigParser):
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
@@ -115,7 +116,7 @@ class Config(ConfigResolverBase):
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
-        SafeConfigParser.__init__(self, **kwargs)
+        super(Config, self).__init__(**kwargs)
         self._log = logging.getLogger('{}.{}.{}'.format(__name__,
                                                         group_name,
                                                         app_name))
@@ -246,15 +247,15 @@ class Config(ConfigResolverBase):
 
     def get(self, section, option, **kwargs):
         """
-        Overrides :py:meth:`configparser.SafeConfigParser.get`.
+        Overrides :py:meth:`configparser.ConfigParser.get`.
 
         In addition to ``section`` and ``option``, this call takes an optional
         ``default`` value. This behaviour works in *addition* to the
-        :py:class:`configparser.SafeConfigParser` default mechanism. Note that
-        a default value from ``SafeConfigParser`` takes precedence.
+        :py:class:`configparser.ConfigParser` default mechanism. Note that
+        a default value from ``ConfigParser`` takes precedence.
 
         The reason this additional functionality is added, is because the
-        defaults of :py:class:`configparser.SafeConfigParser` are not dependent
+        defaults of :py:class:`configparser.ConfigParser` are not dependent
         on sections. If you specify a default for the option ``test``, then
         this value will be returned for both ``section1.test`` and for
         ``section2.test``. Using the default on the ``get`` call gives you more
@@ -266,7 +267,7 @@ class Config(ConfigResolverBase):
         :param section: The config file section.
         :param option: The option name.
         :param kwargs: These keyword args are passed through to
-                       :py:meth:`configparser.SafeConfigParser.get`.
+                       :py:meth:`configparser.ConfigParser.get`.
         """
         if "default" in kwargs:
             default = kwargs.pop("default")
@@ -275,7 +276,7 @@ class Config(ConfigResolverBase):
             have_default = False
 
         try:
-            value = SafeConfigParser.get(self, section, option, **kwargs)
+            value = super(Config, self).get(section, option, **kwargs)
             return value
         except (NoSectionError, NoOptionError) as exc:
             if have_default:
@@ -351,7 +352,7 @@ class Config(ConfigResolverBase):
 
     def read(self, *args, **kwargs):
         """
-        Overrides :py:meth:`configparser.SafeConfigParser.read`.
+        Overrides :py:meth:`configparser.ConfigParser.read`.
 
         In addition to the default ``read`` method, this does version checking
         if this instance has been created with a version number. It uses
