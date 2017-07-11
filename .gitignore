@@ -6,3 +6,5 @@
 /env3
 /htmlcov
 /doc/_build
+*.pyc
+__pycache__
