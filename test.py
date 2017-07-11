@@ -74,7 +74,7 @@ class TestableHandler(logging.Handler):
         for record in self.records:
             if record.name != logger or record.levelno != level:
                 continue
-            if message in record.message:
+            if message in (record.msg % record.args):
                 return True
         return False
 
@@ -122,6 +122,7 @@ class AdvancedInitTest(unittest.TestCase):
     def test_env_name_override(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         Config('hello', 'world')
@@ -146,6 +147,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_override_log(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
         catcher = TestableHandler()
         logger.addHandler(catcher)
@@ -177,6 +179,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_add_log(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
         catcher = TestableHandler()
         logger.addHandler(catcher)
@@ -225,6 +228,7 @@ class FunctionalityTests(unittest.TestCase):
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         SecuredConfig('hello', 'world', filename='test.ini',
@@ -271,6 +275,7 @@ class FunctionalityTests(unittest.TestCase):
 
     def test_mismatching_minor(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
@@ -354,6 +359,7 @@ class FunctionalityTests(unittest.TestCase):
         with patch('config_resolver.Config.check_file') as checker_mock:
             checker_mock.return_value = (True, "")
             logger = logging.getLogger('config_resolver')
+            logger.setLevel(logging.DEBUG)
             catcher = TestableHandler()
             logger.addHandler(catcher)
             Config('hello', 'world')
