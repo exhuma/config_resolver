@@ -19,7 +19,6 @@ from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
-    PrefixFilter,
     IncompatibleVersion)
 
 
