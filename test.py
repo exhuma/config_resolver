@@ -2,7 +2,9 @@ from contextlib import contextmanager
 import unittest
 import logging
 import os
+import sys
 from os.path import expanduser, join, abspath
+from textwrap import dedent
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -76,6 +78,28 @@ class TestableHandler(logging.Handler):
             if message in (record.msg % record.args):
                 return True
         return False
+
+
+@unittest.skipUnless(sys.version_info > (3, 0), 'Test only valid in Python 2')
+class SimpleInitFromContent(unittest.TestCase):
+    '''
+    Tests loading a config string from memory
+    '''
+
+    def setUp(self):
+        self.cfg = Config('not', 'existing', search_path='testdata')
+        self.cfg.read_string(dedent(
+            '''\
+            [section_mem]
+            val = 1
+            '''
+        ))
+
+    def test_sections_available(self):
+        self.assertTrue(self.cfg.has_section('section_mem'))
+
+    def test_getting_values(self):
+        self.assertEqual(self.cfg.get('section_mem', 'val'), '1')
 
 
 class SimpleInitTest(unittest.TestCase):
