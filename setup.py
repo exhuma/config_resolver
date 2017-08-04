@@ -15,7 +15,7 @@ setup(
     long_description=open("README.rst").read(),
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
-    license="LGPL",
+    license="MIT",
     include_package_data=True,
     py_modules=['config_resolver'],
     classifiers=[
