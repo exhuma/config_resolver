@@ -63,6 +63,11 @@ class TestableHandler(logging.Handler):
         """
         self.records.append(record)
 
+    def assert_contains(self, logger, level, needle):
+        if not self.contains(logger, level, needle):
+            msg = '%s did not contain a message with %r and level %r'
+            raise AssertionError(msg % (logger, needle, level))
+
     def contains(self, logger, level, message):
         """
         Checks whether a message has been logged to a specific logger with a
@@ -303,11 +308,18 @@ class FunctionalityTests(unittest.TestCase):
         logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
                version='2.0')
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             'Mismatching minor version number')
-        self.assertTrue(result)
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.WARNING,
+            '2.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.WARNING,
+            '2.0')
 
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',

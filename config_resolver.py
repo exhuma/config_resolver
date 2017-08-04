@@ -367,21 +367,22 @@ class Config(ConfigResolverBase):
         # The config object was apparently instantiated with a version number.
         # Check that config files we read have appropriate version information.
         if self.has_option('meta', 'version'):
-            major, minor, _ = StrictVersion(
-                self.get('meta', 'version')).version
+            file_version = self.get('meta', 'version')
+            major, minor, _ = StrictVersion(file_version).version
             expected_major, expected_minor, _ = self.version.version
 
             if expected_major != major:
                 raise IncompatibleVersion(
                     'Invalid major version number. Expected {!r}, got {!r} '
-                    'from filename {!r}!'.format(expected_major, major,
+                    'from filename {!r}!'.format(str(self.version),
+                                                 file_version,
                                                  args[0]))
 
             if expected_minor != minor:
                 self._log.warning('Mismatching minor version number. '
                                   'Expected {!r}, got {!r} '
-                                  'from filename {!r}'.format(expected_minor,
-                                                              minor,
+                                  'from filename {!r}'.format(str(self.version),
+                                                              file_version,
                                                               args[0]))
         else:
             raise NoVersionError(
