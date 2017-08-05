@@ -16,7 +16,7 @@ import stat
 import sys
 from distutils.version import StrictVersion
 
-__version__ = '4.2.2'
+__version__ = '4.2.3'
 
 
 class PrefixFilter(object):
@@ -234,16 +234,54 @@ class Config(ConfigResolverBase):
     def check_file(self, filename):
         """
         Check if ``filename`` can be read. Will return a 2-tuple containing a
-        boolean if the file can be read, and a string containing the cause
-        (empty if the file is readable).
+        boolean if the file can be read, and a string containing an
+        error/warning message.
 
-        This mainly exists to make it possible to override this with different
-        rules.
+        If the status is "True", then the message should be considered a
+        warning. Otherwise it should be considered an error.
         """
-        if exists(filename):
-            return True, ''
-        else:
+        if not exists(filename):
             return False, 'File does not exist'
+
+        # Check if the file is version-compatible with this instance.
+        new_config = ConfigResolverBase()
+        new_config.read(filename)
+        if self.version and not new_config.has_option('meta', 'version'):
+            # self.version is set, so we MUST have a version in the file!
+            raise NoVersionError(
+                "The config option 'meta.version' is missing in {}. The "
+                "application expects version {}!".format(filename,
+                                                         self.version))
+        elif not self.version and new_config.has_option('meta', 'version'):
+            # Automatically "lock-in" a version number if one is found.
+            # This prevents loading a chain of config files with incompatible
+            # version numbers!
+            self.version = StrictVersion(new_config.get('meta', 'version'))
+            self._log.info('%r contains a version number, but the config '
+                           'instance was not created with a version '
+                           'restriction. Will set version number to "%s" to '
+                           'prevent accidents!',
+                           filename, self.version)
+        elif self.version:
+            # This instance expected a certain version. We need to check the
+            # version in the file and compare.
+            file_version = new_config.get('meta', 'version')
+            major, minor, _ = StrictVersion(file_version).version
+            expected_major, expected_minor, _ = self.version.version
+            if expected_major != major:
+                reason = (
+                    'Invalid major version number. Expected %r, got %r!' % (
+                        str(self.version),
+                        file_version))
+                return False, reason
+
+            if expected_minor != minor:
+                return True, (
+                    'Mismatching minor version number. Expected %r, got %r!' % (
+                        str(self.version),
+                        file_version))
+
+        return True, ''
 
     def get(self, section, option, **kwargs):
         """
@@ -322,10 +360,12 @@ class Config(ConfigResolverBase):
             conf_name = join(dirname, config_filename)
             readable, cause = self.check_file(conf_name)
             if readable:
-                self.read(conf_name)
+                if cause:
+                    self._log.warning(cause)
                 self._log.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
+                self.read(conf_name)
                 if conf_name == expanduser("~/.%s/%s/%s" % (
                         self.group_name, self.app_name, self.filename)):
                     self._log.warning(
@@ -340,7 +380,7 @@ class Config(ConfigResolverBase):
                         self.app_name)
                 self.loaded_files.append(conf_name)
             else:
-                self._log.debug('Unable to read %r (%s)' % (conf_name, cause))
+                self._log.error('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             self._log.warning(
@@ -349,45 +389,6 @@ class Config(ConfigResolverBase):
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
-
-    def read(self, *args, **kwargs):
-        """
-        Overrides :py:meth:`configparser.ConfigParser.read`.
-
-        In addition to the default ``read`` method, this does version checking
-        if this instance has been created with a version number. It uses
-        :py:class:`distutils.version.StrictVersion` for version parsing.
-        """
-        output = super(Config, self).read(*args, **kwargs)
-        if not self.version:
-            # No versioning is expected, so we can ignore the rest of this
-            # method.
-            return output
-
-        # The config object was apparently instantiated with a version number.
-        # Check that config files we read have appropriate version information.
-        if self.has_option('meta', 'version'):
-            major, minor, _ = StrictVersion(
-                self.get('meta', 'version')).version
-            expected_major, expected_minor, _ = self.version.version
-
-            if expected_major != major:
-                raise IncompatibleVersion(
-                    'Invalid major version number. Expected {!r}, got {!r} '
-                    'from filename {!r}!'.format(expected_major, major,
-                                                 args[0]))
-
-            if expected_minor != minor:
-                self._log.warning('Mismatching minor version number. '
-                                  'Expected {!r}, got {!r} '
-                                  'from filename {!r}'.format(expected_minor,
-                                                              minor,
-                                                              args[0]))
-        else:
-            raise NoVersionError(
-                "The config option 'meta.version' is missing in {}. The "
-                "application expects version {}!".format(args[0],
-                                                         self.version))
 
 
 class SecuredConfig(Config):

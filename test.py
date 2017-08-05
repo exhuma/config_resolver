@@ -1,8 +1,11 @@
 from contextlib import contextmanager
-import unittest
 import logging
 import os
+import stat
+import sys
+import unittest
 from os.path import expanduser, join, abspath
+from textwrap import dedent
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -19,7 +22,6 @@ from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
-    PrefixFilter,
     IncompatibleVersion)
 
 
@@ -62,6 +64,11 @@ class TestableHandler(logging.Handler):
         """
         self.records.append(record)
 
+    def assert_contains(self, logger, level, needle):
+        if not self.contains(logger, level, needle):
+            msg = '%s did not contain a message with %r and level %r'
+            raise AssertionError(msg % (logger, needle, level))
+
     def contains(self, logger, level, message):
         """
         Checks whether a message has been logged to a specific logger with a
@@ -74,9 +81,31 @@ class TestableHandler(logging.Handler):
         for record in self.records:
             if record.name != logger or record.levelno != level:
                 continue
-            if message in record.message:
+            if message in (record.msg % record.args):
                 return True
         return False
+
+
+@unittest.skipUnless(sys.version_info > (3, 0), 'Test only valid in Python 2')
+class SimpleInitFromContent(unittest.TestCase):
+    '''
+    Tests loading a config string from memory
+    '''
+
+    def setUp(self):
+        self.cfg = Config('not', 'existing', search_path='testdata')
+        self.cfg.read_string(dedent(
+            '''\
+            [section_mem]
+            val = 1
+            '''
+        ))
+
+    def test_sections_available(self):
+        self.assertTrue(self.cfg.has_section('section_mem'))
+
+    def test_getting_values(self):
+        self.assertEqual(self.cfg.get('section_mem', 'val'), '1')
 
 
 class SimpleInitTest(unittest.TestCase):
@@ -122,6 +151,7 @@ class AdvancedInitTest(unittest.TestCase):
     def test_env_name_override(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         Config('hello', 'world')
@@ -146,6 +176,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_override_log(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
         catcher = TestableHandler()
         logger.addHandler(catcher)
@@ -177,6 +208,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_add_log(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
         catcher = TestableHandler()
         logger.addHandler(catcher)
@@ -212,19 +244,19 @@ class AdvancedInitTest(unittest.TestCase):
 
 class FunctionalityTests(unittest.TestCase):
 
-    def setUp(self):
-        self.cfg = Config('hello', 'world', search_path='testdata')
-
     def test_mandatory_section(self):
+        config = Config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoSectionError):
-            self.cfg.get('nosuchsection', 'nosuchoption')
+            config.get('nosuchsection', 'nosuchoption')
 
     def test_mandatory_option(self):
+        config = Config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoOptionError):
-            self.cfg.get('section1', 'nosuchoption')
+            config.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         SecuredConfig('hello', 'world', filename='test.ini',
@@ -245,9 +277,18 @@ class FunctionalityTests(unittest.TestCase):
         self.assertNotIn(join('testdata', 'test.ini'), conf.loaded_files)
 
     def test_secured_file(self):
+        # make sure the file is secured. This information is lost through git so
+        # we need to set it here manually. Also, this is only available on *nix,
+        # so we need to skip if necessary
+        if sys.platform != 'linux':
+            self.skipTest('Only runnable on *nix')
+
+        path = join('testdata', 'secure.ini')
+        os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+
         conf = SecuredConfig('hello', 'world', filename='secure.ini',
                              search_path='testdata')
-        self.assertIn(join('testdata', 'secure.ini'), conf.loaded_files)
+        self.assertIn(path, conf.loaded_files)
 
     def test_secured_nonexisting_file(self):
         conf = SecuredConfig('hello', 'world', filename='nonexisting.ini',
@@ -265,21 +306,79 @@ class FunctionalityTests(unittest.TestCase):
             Config('hello', 'world', search_path='testdata', version='1.1')
 
     def test_mismatching_major(self):
-        with self.assertRaises(IncompatibleVersion):
-            Config('hello', 'world', search_path='testdata/versioned',
-                   version='1.1')
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+
+        config = Config('hello', 'world', search_path='testdata/versioned',
+                        version='1.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            'Invalid major version number')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '2.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '1.1')
+
+        # Values should not be loaded. Let's check if they really are missing.
+        # They should be!
+        self.assertFalse('section1' in config.sections())
+
+        # Also, no files should be added to the "loaded_files" list.
+        self.assertEqual(config.loaded_files, [])
 
     def test_mismatching_minor(self):
         logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
                version='2.0')
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             'Mismatching minor version number')
-        self.assertTrue(result)
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.WARNING,
+            '2.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.WARNING,
+            '2.0')
+
+    def test_mixed_version_load(self):
+        """
+        If the instance has no version assigned, the first file which contains a
+        version should "lock in" that version. This is to avoid mixed config
+        files even if the application did not explicitly request a version
+        number!
+        """
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world',
+               filename='mismatch.ini',
+               search_path='testdata/versioned:testdata/versioned2')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            'Invalid major version number')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '1.0')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '2.0')
 
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
@@ -354,6 +453,7 @@ class FunctionalityTests(unittest.TestCase):
         with patch('config_resolver.Config.check_file') as checker_mock:
             checker_mock.return_value = (True, "")
             logger = logging.getLogger('config_resolver')
+            logger.setLevel(logging.DEBUG)
             catcher = TestableHandler()
             logger.addHandler(catcher)
             Config('hello', 'world')
@@ -366,7 +466,7 @@ class FunctionalityTests(unittest.TestCase):
                 "file!".format(
                     home=expanduser("~")))
             result = catcher.contains(
-                'config_resolver',
+                'config_resolver.hello.world',
                 logging.WARNING,
                 expected_message)
             self.assertTrue(result, "Expected log message: {!r} not found in "
