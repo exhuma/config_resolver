@@ -343,6 +343,33 @@ class FunctionalityTests(unittest.TestCase):
             logging.WARNING,
             '2.0')
 
+    def test_mixed_version_load(self):
+        """
+        If the instance has no version assigned, the first file which contains a
+        version should "lock in" that version. This is to avoid mixed config
+        files even if the application did not explicitly request a version
+        number!
+        """
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world',
+               filename='mismatch.ini',
+               search_path='testdata/versioned:testdata/versioned2')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            'Invalid major version number')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '1.0')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '2.0')
+
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME=''):

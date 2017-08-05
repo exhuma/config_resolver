@@ -252,6 +252,16 @@ class Config(ConfigResolverBase):
                 "The config option 'meta.version' is missing in {}. The "
                 "application expects version {}!".format(filename,
                                                          self.version))
+        elif not self.version and new_config.has_option('meta', 'version'):
+            # Automatically "lock-in" a version number if one is found.
+            # This prevents loading a chain of config files with incompatible
+            # version numbers!
+            self.version = StrictVersion(new_config.get('meta', 'version'))
+            self._log.info('%r contains a version number, but the config '
+                           'instance was not created with a version '
+                           'restriction. Will set version number to "%s" to '
+                           'prevent accidents!',
+                           filename, self.version)
         elif self.version:
             # This instance expected a certain version. We need to check the
             # version in the file and compare.
@@ -272,7 +282,6 @@ class Config(ConfigResolverBase):
                         file_version))
 
         return True, ''
-
 
     def get(self, section, option, **kwargs):
         """
