@@ -98,18 +98,20 @@ Config file example::
     [database]
     dsn=foobar
 
-If you don't specify a version number in the construcor, an unversioned file is
-assumed.
+If you don't specify a version number in the construcor versioning will trigger
+automatically on the first file encountered which has a version number. The
+reason this triggers is to prevent accidentally loading files which
+incompatible version.
 
 Only "major" and "minor" numbers are supported. If the application encounters a
-file with a different "major" value, it will raise a
-:py:class:`config_resolver.IncompatibleVersion` exception. Differences in minor
-numbers are only logged with a "warning" level.
+file with a different "major" value, it will emit a log message with severity
+``ERROR`` and the file will be skipped.  Differences in minor numbers are only
+logged with a "warning" level but the file will be loaded.
 
 Rule of thumb: If your application accepts a new config value, but can function
-just fine with default values, increment the minor number. If on the other
-hand, something has changed, and the user needs to change the config file,
-increment the major number.
+just fine with previous and default values, increment the minor number. If on
+the other hand, something has changed, and the user needs to change the config
+file, increment the major number.
 
 Requiring files (bail out if no config is found)
 ------------------------------------------------

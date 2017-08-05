@@ -106,10 +106,10 @@ class Config(ConfigResolverBase):
         instance will raise an :py:exc:`OSError` if not a single file could be
         loaded.
     :param version: If specified (f.ex.: ``version='2.0'``), this will create a
-        versioned config instance. A versioned instance may raise a
-        :py:exc:`.IncompatibleVersion` exception if the major version differs
-        from the one found in the config file. If left to the default, no
-        version checking is performed. Version numbers are parsed using
+        versioned config instance. A versioned instance will only load config
+        files which have the same major version. On mismatch an error is logged
+        and the file is skipped. If the minor version differs the file will be
+        loaded, but issue a warning log. Version numbers are parsed using
         :py:class:`distutils.version.StrictVersion`
     """
 
