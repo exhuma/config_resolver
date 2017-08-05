@@ -1,8 +1,9 @@
 from contextlib import contextmanager
-import unittest
 import logging
 import os
+import stat
 import sys
+import unittest
 from os.path import expanduser, join, abspath
 from textwrap import dedent
 
@@ -276,9 +277,18 @@ class FunctionalityTests(unittest.TestCase):
         self.assertNotIn(join('testdata', 'test.ini'), conf.loaded_files)
 
     def test_secured_file(self):
+        # make sure the file is secured. This information is lost through git so
+        # we need to set it here manually. Also, this is only available on *nix,
+        # so we need to skip if necessary
+        if sys.platform != 'linux':
+            self.skipTest('Only runnable on *nix')
+
+        path = join('testdata', 'secure.ini')
+        os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+
         conf = SecuredConfig('hello', 'world', filename='secure.ini',
                              search_path='testdata')
-        self.assertIn(join('testdata', 'secure.ini'), conf.loaded_files)
+        self.assertIn(path, conf.loaded_files)
 
     def test_secured_nonexisting_file(self):
         conf = SecuredConfig('hello', 'world', filename='nonexisting.ini',
