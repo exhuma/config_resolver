@@ -243,16 +243,15 @@ class AdvancedInitTest(unittest.TestCase):
 
 class FunctionalityTests(unittest.TestCase):
 
-    def setUp(self):
-        self.cfg = Config('hello', 'world', search_path='testdata')
-
     def test_mandatory_section(self):
+        config = Config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoSectionError):
-            self.cfg.get('nosuchsection', 'nosuchoption')
+            config.get('nosuchsection', 'nosuchoption')
 
     def test_mandatory_option(self):
+        config = Config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoOptionError):
-            self.cfg.get('section1', 'nosuchoption')
+            config.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')
