@@ -22,7 +22,7 @@ from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
-    IncompatibleVersion)
+)
 
 
 @contextmanager
