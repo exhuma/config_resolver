@@ -241,7 +241,7 @@ class Config(ConfigResolverBase):
         warning. Otherwise it should be considered an error.
         """
         if not exists(filename):
-            return False, 'File does not exist'
+            return False
 
         # Check if the file is version-compatible with this instance.
         new_config = ConfigResolverBase()
@@ -269,19 +269,19 @@ class Config(ConfigResolverBase):
             major, minor, _ = StrictVersion(file_version).version
             expected_major, expected_minor, _ = self.version.version
             if expected_major != major:
-                reason = (
-                    'Invalid major version number. Expected %r, got %r!' % (
-                        str(self.version),
-                        file_version))
-                return False, reason
+                self._log.error(
+                    'Invalid major version number. Expected %r, got %r!',
+                    str(self.version),
+                    file_version)
+                return False
 
             if expected_minor != minor:
-                return True, (
-                    'Mismatching minor version number. Expected %r, got %r!' % (
-                        str(self.version),
-                        file_version))
-
-        return True, ''
+                self._log.warning(
+                    'Mismatching minor version number. Expected %r, got %r!',
+                    str(self.version),
+                    file_version)
+                return True
+        return True
 
     def get(self, section, option, **kwargs):
         """
@@ -358,10 +358,8 @@ class Config(ConfigResolverBase):
         self.active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
-            readable, cause = self.check_file(conf_name)
+            readable = self.check_file(conf_name)
             if readable:
-                if cause:
-                    self._log.warning(cause)
                 self._log.info('%s config from %s' % (
                     self.loaded_files and 'Updating' or 'Loading initial',
                     conf_name))
@@ -379,8 +377,6 @@ class Config(ConfigResolverBase):
                         self.app_name, expanduser("~"), self.group_name,
                         self.app_name)
                 self.loaded_files.append(conf_name)
-            else:
-                self._log.error('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             self._log.warning(
@@ -401,14 +397,14 @@ class SecuredConfig(Config):
         """
         Overrides :py:meth:`.Config.check_file`
         """
-        can_read, reason = super(SecuredConfig, self).check_file(filename)
+        can_read = super(SecuredConfig, self).check_file(filename)
         if not can_read:
-            return False, reason
+            return False
 
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
             msg = "File %r is not secure enough. Change it's mode to 600"
             self._log.warning(msg, filename)
-            return False, msg
+            return False
         else:
-            return True, ''
+            return True
