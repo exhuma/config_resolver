@@ -456,7 +456,7 @@ class FunctionalityTests(unittest.TestCase):
                 "file!".format(
                     home=expanduser("~")))
             result = catcher.contains(
-                'config_resolver',
+                'config_resolver.hello.world',
                 logging.WARNING,
                 expected_message)
             self.assertTrue(result, "Expected log message: {!r} not found in "
