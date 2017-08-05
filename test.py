@@ -296,9 +296,32 @@ class FunctionalityTests(unittest.TestCase):
             Config('hello', 'world', search_path='testdata', version='1.1')
 
     def test_mismatching_major(self):
-        with self.assertRaises(IncompatibleVersion):
-            Config('hello', 'world', search_path='testdata/versioned',
-                   version='1.1')
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+
+        config = Config('hello', 'world', search_path='testdata/versioned',
+                        version='1.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            'Invalid major version number')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '2.1')
+        catcher.assert_contains(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            '1.1')
+
+        # Values should not be loaded. Let's check if they really are missing.
+        # They should be!
+        self.assertFalse('section1' in config.sections())
+
+        # Also, no files should be added to the "loaded_files" list.
+        self.assertEqual(config.loaded_files, [])
 
     def test_mismatching_minor(self):
         logger = logging.getLogger('config_resolver')
