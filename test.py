@@ -16,7 +16,11 @@ try:
     from mock import patch
     have_mock = True
 except ImportError:
-    have_mock = False
+    try:
+        from unittest.mock import patch
+        have_mock = True
+    except ImportError:
+        have_mock = False
 
 from config_resolver import (
     Config,
