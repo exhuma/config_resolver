@@ -10,7 +10,7 @@ except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
 from os import getenv, pathsep, getcwd, stat as get_stat
-from os.path import expanduser, exists, join
+from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 import sys
@@ -273,14 +273,17 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
             expected_major, expected_minor, _ = self.version.version
             if expected_major != major:
                 self._log.error(
-                    'Invalid major version number. Expected %r, got %r!',
+                    'Invalid major version number in %r. Expected %r, got %r!',
+                    abspath(filename),
                     str(self.version),
                     file_version)
                 return False
 
             if expected_minor != minor:
                 self._log.warning(
-                    'Mismatching minor version number. Expected %r, got %r!',
+                    'Mismatching minor version number in %r. '
+                    'Expected %r, got %r!',
+                    abspath(filename),
                     str(self.version),
                     file_version)
                 return True
