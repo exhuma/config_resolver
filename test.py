@@ -173,12 +173,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_env_path(self):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
@@ -199,12 +197,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_env_path_add(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
@@ -231,12 +227,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_search_path(self):
         cfg = Config('hello', 'world',
@@ -280,12 +274,10 @@ class FunctionalityTests(unittest.TestCase):
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             expected_message)
-        self.assertTrue(result, "Expected log message: {!r} not found in "
-                        "logger!".format(expected_message))
 
     def test_unsecured_file(self):
         conf = SecuredConfig('hello', 'world', filename='test.ini',
@@ -481,12 +473,10 @@ class FunctionalityTests(unittest.TestCase):
                 "config_resolver! You can already (and should) move the "
                 "file!".format(
                     home=expanduser("~")))
-            result = catcher.contains(
+            catcher.assert_contains(
                 'config_resolver.hello.world',
                 logging.WARNING,
                 expected_message)
-            self.assertTrue(result, "Expected log message: {!r} not found in "
-                            "logger!".format(expected_message))
 
     def test_filename_in_log_minor(self):
         """
@@ -496,7 +486,8 @@ class FunctionalityTests(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        Config('hello', 'world', search_path='testdata/versioned', version='2.0')
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='2.0')
         catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -510,7 +501,8 @@ class FunctionalityTests(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        Config('hello', 'world', search_path='testdata/versioned', version='5.0')
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='5.0')
         catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
