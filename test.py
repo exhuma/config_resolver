@@ -486,7 +486,8 @@ class FunctionalityTests(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        Config('hello', 'world', search_path='testdata/versioned', version='2.0')
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='2.0')
         catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -500,7 +501,8 @@ class FunctionalityTests(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        Config('hello', 'world', search_path='testdata/versioned', version='5.0')
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='5.0')
         catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
