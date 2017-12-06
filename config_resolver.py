@@ -10,7 +10,7 @@ except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
 from os import getenv, pathsep, getcwd, stat as get_stat
-from os.path import expanduser, exists, join
+from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 import sys
@@ -27,6 +27,7 @@ class PrefixFilter(object):
     :param separator: A string to put between the prefix and the original log
                       message.
     """
+    # pylint: disable = too-few-public-methods
 
     def __init__(self, prefix, separator=' '):
         self._prefix = prefix
@@ -41,6 +42,7 @@ class PrefixFilter(object):
         # filter with the exact same class name and with a ``_prefix`` and
         # ``_separator`` member. They would wrongly be assumed to be the same.
         # I'll assume this won't happen for now.
+        # pylint: disable = protected-access
         return (self.__class__.__name__ == other.__class__.__name__ and
                 other._prefix == self._prefix and
                 other._separator == self._separator)
@@ -50,6 +52,7 @@ class PrefixFilter(object):
             self._prefix, self._separator)
 
     def filter(self, record):
+        # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True
 
@@ -72,23 +75,23 @@ class NoVersionError(Exception):
 
 if sys.hexversion < 0x030000F0:
     # Python 2
+    # pylint: disable = too-few-public-methods
     class ConfigResolverBase(SafeConfigParser, object):
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
-        pass
 else:
     # Python 3
-    class ConfigResolverBase(ConfigParser):
+    # pylint: disable = too-few-public-methods
+    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
-        pass
 
 
-class Config(ConfigResolverBase):
+class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
     :param app_name: an application identifier (f.ex.: the application
@@ -106,16 +109,18 @@ class Config(ConfigResolverBase):
         instance will raise an :py:exc:`OSError` if not a single file could be
         loaded.
     :param version: If specified (f.ex.: ``version='2.0'``), this will create a
-        versioned config instance. A versioned instance may raise a
-        :py:exc:`.IncompatibleVersion` exception if the major version differs
-        from the one found in the config file. If left to the default, no
-        version checking is performed. Version numbers are parsed using
+        versioned config instance. A versioned instance will only load config
+        files which have the same major version. On mismatch an error is logged
+        and the file is skipped. If the minor version differs the file will be
+        loaded, but issue a warning log. Version numbers are parsed using
         :py:class:`distutils.version.StrictVersion`
     """
+    # pylint: disable = too-many-instance-attributes
 
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
+        # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
         self._log = logging.getLogger('{}.{}.{}'.format(__name__,
                                                         group_name,
@@ -125,7 +130,7 @@ class Config(ConfigResolverBase):
         if self._prefix_filter not in self._log.filters:
             self._log.addFilter(self._prefix_filter)
 
-        self.version = version and StrictVersion(version) or None
+        self.version = StrictVersion(version) if version else None
         self.config = None
         self.group_name = group_name
         self.app_name = app_name
@@ -156,8 +161,7 @@ class Config(ConfigResolverBase):
             for path in reversed(config_dirs.split(':')):
                 output.append(join(path, self.group_name, self.app_name))
             return output
-        else:
-            return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
+        return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
 
     def get_xdg_home(self):
         """
@@ -167,11 +171,8 @@ class Config(ConfigResolverBase):
         config_home = getenv('XDG_CONFIG_HOME', '')
         if config_home:
             self._log.debug('XDG_CONFIG_HOME is set to %r', config_home)
-            return expanduser(join(config_home, self.group_name,
-                                   self.app_name))
-        else:
-            return expanduser('~/.config/%s/%s' % (self.group_name,
-                                                   self.app_name))
+            return expanduser(join(config_home, self.group_name, self.app_name))
+        return expanduser('~/.config/%s/%s' % (self.group_name, self.app_name))
 
     def _effective_filename(self):
         """
@@ -187,9 +188,10 @@ class Config(ConfigResolverBase):
         # ... next, take the value from the environment
         env_filename = getenv(self.env_filename_name)
         if env_filename:
-            self._log.info('Configuration filename was overridden with {0!r} '
-                           'by the environment variable {1}.'.format(
-                               env_filename, self.env_filename_name))
+            self._log.info('Configuration filename was overridden with %r '
+                           'by the environment variable %s.',
+                           env_filename,
+                           self.env_filename_name)
             config_filename = env_filename
 
         return config_filename
@@ -217,31 +219,28 @@ class Config(ConfigResolverBase):
         if env_path and env_path.startswith('+'):
             # If prefixed with a '+', append the path elements
             additional_paths = env_path[1:].split(pathsep)
-            self._log.info('Search path extended with {0!r} by the '
-                           'environment variable {1}.'.format(
-                               additional_paths, self.env_path_name))
+            self._log.info('Search path extended with %r by the environment '
+                           'variable %s.',
+                           additional_paths,
+                           self.env_path_name)
             path.extend(additional_paths)
         elif env_path:
             # Otherwise, override again. This takes absolute precedence.
             self._log.info("Configuration search path was overridden with "
-                           "{0!r} by the environment variable {1!r}.".format(
-                               env_path,
-                               self.env_path_name))
+                           "%r by the environment variable %r.",
+                           env_path,
+                           self.env_path_name)
             path = env_path.split(pathsep)
 
         return path
 
     def check_file(self, filename):
         """
-        Check if ``filename`` can be read. Will return a 2-tuple containing a
-        boolean if the file can be read, and a string containing an
-        error/warning message.
-
-        If the status is "True", then the message should be considered a
-        warning. Otherwise it should be considered an error.
+        Check if ``filename`` can be read. Will return boolean which is True if
+        the file can be read, False otherwise.
         """
         if not exists(filename):
-            return False, 'File does not exist'
+            return False
 
         # Check if the file is version-compatible with this instance.
         new_config = ConfigResolverBase()
@@ -269,19 +268,22 @@ class Config(ConfigResolverBase):
             major, minor, _ = StrictVersion(file_version).version
             expected_major, expected_minor, _ = self.version.version
             if expected_major != major:
-                reason = (
-                    'Invalid major version number. Expected %r, got %r!' % (
-                        str(self.version),
-                        file_version))
-                return False, reason
+                self._log.error(
+                    'Invalid major version number in %r. Expected %r, got %r!',
+                    abspath(filename),
+                    str(self.version),
+                    file_version)
+                return False
 
             if expected_minor != minor:
-                return True, (
-                    'Mismatching minor version number. Expected %r, got %r!' % (
-                        str(self.version),
-                        file_version))
-
-        return True, ''
+                self._log.warning(
+                    'Mismatching minor version number in %r. '
+                    'Expected %r, got %r!',
+                    abspath(filename),
+                    str(self.version),
+                    file_version)
+                return True
+        return True
 
     def get(self, section, option, **kwargs):
         """
@@ -318,9 +320,7 @@ class Config(ConfigResolverBase):
             return value
         except (NoSectionError, NoOptionError) as exc:
             if have_default:
-                self._log.debug("{0}: Returning default value {1!r}".format(
-                    exc,
-                    default))
+                self._log.debug("%s: Returning default value %r", exc, default)
                 return default
             else:
                 raise
@@ -358,13 +358,10 @@ class Config(ConfigResolverBase):
         self.active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
-            readable, cause = self.check_file(conf_name)
+            readable = self.check_file(conf_name)
             if readable:
-                if cause:
-                    self._log.warning(cause)
-                self._log.info('%s config from %s' % (
-                    self.loaded_files and 'Updating' or 'Loading initial',
-                    conf_name))
+                action = 'Updating' if self.loaded_files else 'Loading initial'
+                self._log.info('%s config from %s', action, conf_name)
                 self.read(conf_name)
                 if conf_name == expanduser("~/.%s/%s/%s" % (
                         self.group_name, self.app_name, self.filename)):
@@ -379,19 +376,18 @@ class Config(ConfigResolverBase):
                         self.app_name, expanduser("~"), self.group_name,
                         self.app_name)
                 self.loaded_files.append(conf_name)
-            else:
-                self._log.error('Unable to read %r (%s)' % (conf_name, cause))
 
         if not self.loaded_files and not require_load:
             self._log.warning(
-                "No config file named %s found! Search path was %r" % (
-                    config_filename, path))
+                "No config file named %s found! Search path was %r",
+                config_filename,
+                path)
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
 
 
-class SecuredConfig(Config):
+class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
     """
     A subclass of :py:class:`.Config` which will refuse to load config files
     which are read able by other users than the owner.
@@ -401,14 +397,13 @@ class SecuredConfig(Config):
         """
         Overrides :py:meth:`.Config.check_file`
         """
-        can_read, reason = super(SecuredConfig, self).check_file(filename)
+        can_read = super(SecuredConfig, self).check_file(filename)
         if not can_read:
-            return False, reason
+            return False
 
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
             msg = "File %r is not secure enough. Change it's mode to 600"
             self._log.warning(msg, filename)
-            return False, msg
-        else:
-            return True, ''
+            return False
+        return True
