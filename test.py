@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import logging
 import os
+import re
 import stat
 import sys
 import unittest
@@ -16,13 +17,17 @@ try:
     from mock import patch
     have_mock = True
 except ImportError:
-    have_mock = False
+    try:
+        from unittest.mock import patch
+        have_mock = True
+    except ImportError:
+        have_mock = False
 
 from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
-    IncompatibleVersion)
+)
 
 
 @contextmanager
@@ -69,7 +74,12 @@ class TestableHandler(logging.Handler):
             msg = '%s did not contain a message with %r and level %r'
             raise AssertionError(msg % (logger, needle, level))
 
-    def contains(self, logger, level, message):
+    def assert_contains_regex(self, logger, level, needle):
+        if not self.contains(logger, level, needle, is_regex=True):
+            msg = '%s did not contain a message matching %r and level %r'
+            raise AssertionError(msg % (logger, needle, level))
+
+    def contains(self, logger, level, message, is_regex=False):
         """
         Checks whether a message has been logged to a specific logger with a
         specific level.
@@ -77,12 +87,18 @@ class TestableHandler(logging.Handler):
         :param logger: The logger.
         :param level: The log level.
         :param messgae: The message contents.
+        :param is_regex: Whether the expected message is a regex or not.
+            Non-regex messages are simply tested for inclusion.
         """
         for record in self.records:
             if record.name != logger or record.levelno != level:
                 continue
-            if message in (record.msg % record.args):
-                return True
+            if is_regex:
+                if re.search(message, (record.msg % record.args)):
+                    return True
+            else:
+                if message in (record.msg % record.args):
+                    return True
         return False
 
 
@@ -157,12 +173,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_env_path(self):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
@@ -183,12 +197,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_env_path_add(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
@@ -215,12 +227,10 @@ class AdvancedInitTest(unittest.TestCase):
         Config('hello', 'world')
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
-        self.assertTrue(result, 'Expected log message {!r} not found in '
-                        'logger!'.format(msg))
 
     def test_search_path(self):
         cfg = Config('hello', 'world',
@@ -264,12 +274,10 @@ class FunctionalityTests(unittest.TestCase):
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
-        result = catcher.contains(
+        catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             expected_message)
-        self.assertTrue(result, "Expected log message: {!r} not found in "
-                        "logger!".format(expected_message))
 
     def test_unsecured_file(self):
         conf = SecuredConfig('hello', 'world', filename='test.ini',
@@ -465,12 +473,40 @@ class FunctionalityTests(unittest.TestCase):
                 "config_resolver! You can already (and should) move the "
                 "file!".format(
                     home=expanduser("~")))
-            result = catcher.contains(
+            catcher.assert_contains(
                 'config_resolver.hello.world',
                 logging.WARNING,
                 expected_message)
-            self.assertTrue(result, "Expected log message: {!r} not found in "
-                            "logger!".format(expected_message))
+
+    def test_filename_in_log_minor(self):
+        """
+        When getting a version number mismatch, the filename should be logged!
+        """
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='2.0')
+        catcher.assert_contains_regex(
+            'config_resolver.hello.world',
+            logging.WARNING,
+            'testdata/versioned/app.ini')
+
+    def test_filename_in_log_major(self):
+        """
+        When getting a version number mismatch, the filename should be logged!
+        """
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        catcher = TestableHandler()
+        logger.addHandler(catcher)
+        Config('hello', 'world', search_path='testdata/versioned',
+               version='5.0')
+        catcher.assert_contains_regex(
+            'config_resolver.hello.world',
+            logging.ERROR,
+            'testdata/versioned/app.ini')
 
 
 class Regressions(unittest.TestCase):

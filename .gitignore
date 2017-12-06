@@ -1,10 +1,12 @@
+*.pyc
 /*.egg-info
+/.cache
 /.coverage
 /app.ini
+/build
 /dist
+/doc/_build
 /env
 /env3
 /htmlcov
-/doc/_build
-*.pyc
 __pycache__
