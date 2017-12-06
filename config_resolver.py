@@ -236,12 +236,8 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
     def check_file(self, filename):
         """
-        Check if ``filename`` can be read. Will return a 2-tuple containing a
-        boolean if the file can be read, and a string containing an
-        error/warning message.
-
-        If the status is "True", then the message should be considered a
-        warning. Otherwise it should be considered an error.
+        Check if ``filename`` can be read. Will return boolean which is True if
+        the file can be read, False otherwise.
         """
         if not exists(filename):
             return False
