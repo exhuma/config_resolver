@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 PACKAGE = "config_resolver"
 NAME = "config_resolver"
@@ -17,7 +17,7 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
-    py_modules=['config_resolver'],
+    packages=['config_resolver'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
