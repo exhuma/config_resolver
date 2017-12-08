@@ -29,7 +29,6 @@ from config_resolver import (
     NoVersionError,
 )
 
-
 @contextmanager
 def environment(**kwargs):
     """
@@ -288,7 +287,7 @@ class FunctionalityTests(unittest.TestCase):
         # make sure the file is secured. This information is lost through git so
         # we need to set it here manually. Also, this is only available on *nix,
         # so we need to skip if necessary
-        if sys.platform != 'linux':
+        if sys.platform not in ('linux', 'linux2'):
             self.skipTest('Only runnable on *nix')
 
         path = join('testdata', 'secure.ini')
