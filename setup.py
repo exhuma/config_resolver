@@ -5,7 +5,9 @@ NAME = "config_resolver"
 DESCRIPTION = "A small package to automatically find a configuration file."
 AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
-VERSION = __import__(PACKAGE).__version__
+
+with open('config_resolver/version.txt') as fptr:
+    VERSION = fptr.read().strip()
 
 setup(
     name=NAME,

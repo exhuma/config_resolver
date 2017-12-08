@@ -17,8 +17,6 @@ import logging
 import stat
 from distutils.version import StrictVersion
 
-__version__ = '4.2.4'
-
 
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     """
