@@ -1,11 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 PACKAGE = "config_resolver"
 NAME = "config_resolver"
 DESCRIPTION = "A small package to automatically find a configuration file."
 AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
-VERSION = __import__(PACKAGE).__version__
+
+with open('config_resolver/version.txt') as fptr:
+    VERSION = fptr.read().strip()
 
 setup(
     name=NAME,
@@ -17,7 +19,7 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
-    py_modules=['config_resolver'],
+    packages=['config_resolver'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

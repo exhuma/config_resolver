@@ -1,1 +1,1 @@
-See README.txt
+See README.rst

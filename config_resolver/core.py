@@ -4,91 +4,18 @@ for config files and loads them if found. It provides a framework independed
 way of handling configuration files. Additional care has been taken to allow
 the end-user of the application to override this lookup process.
 """
-try:
-    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
-
+from .exc import NoVersionError
+from .util import (
+    PrefixFilter,
+    ConfigResolverBase,
+    NoSectionError,
+    NoOptionError,
+)
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join, abspath
 import logging
 import stat
-import sys
 from distutils.version import StrictVersion
-
-__version__ = '4.2.4'
-
-
-class PrefixFilter(object):
-    """
-    A logging filter which prefixes each message with a given text.
-
-    :param prefix: The log prefix.
-    :param separator: A string to put between the prefix and the original log
-                      message.
-    """
-    # pylint: disable = too-few-public-methods
-
-    def __init__(self, prefix, separator=' '):
-        self._prefix = prefix
-        self._separator = separator
-
-    def __eq__(self, other):
-        # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
-        # when running the unit-tests through ``sniffer``. Does this have
-        # something to do with ``sniffer`` or is there something wrong with the
-        # code of ``config_resolver``? This is a workaround which is incorrect,
-        # and could in extreme cases cause problems if there was another
-        # filter with the exact same class name and with a ``_prefix`` and
-        # ``_separator`` member. They would wrongly be assumed to be the same.
-        # I'll assume this won't happen for now.
-        # pylint: disable = protected-access
-        return (self.__class__.__name__ == other.__class__.__name__ and
-                other._prefix == self._prefix and
-                other._separator == self._separator)
-
-    def __repr__(self):
-        return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
-            self._prefix, self._separator)
-
-    def filter(self, record):
-        # pylint: disable = missing-docstring
-        record.msg = self._separator.join([self._prefix, record.msg])
-        return True
-
-
-class IncompatibleVersion(Exception):
-    """
-    This exception is raised if a config file is loaded which has a different
-    major version number than expected by the application.
-    """
-    pass
-
-
-class NoVersionError(Exception):
-    """
-    This exception is raised if the application expects a version number to be
-    present in the config file but does not find one.
-    """
-    pass
-
-
-if sys.hexversion < 0x030000F0:
-    # Python 2
-    # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(SafeConfigParser, object):
-        """
-        A default "base" object simplifying Python 2 and Python 3
-        compatibility.
-        """
-else:
-    # Python 3
-    # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
-        """
-        A default "base" object simplifying Python 2 and Python 3
-        compatibility.
-        """
 
 
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
@@ -122,9 +49,9 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
-        self._log = logging.getLogger('{}.{}.{}'.format(__name__,
-                                                        group_name,
-                                                        app_name))
+        self._log = logging.getLogger('config_resolver.{}.{}'.format(
+            group_name,
+            app_name))
         self._prefix_filter = PrefixFilter('group={}:app={}'.format(
             group_name, app_name), separator=':')
         if self._prefix_filter not in self._log.filters:

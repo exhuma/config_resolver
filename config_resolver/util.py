@@ -1,0 +1,71 @@
+"""
+Helpers and utilities for the config_resolver package.
+
+This module contains stuff which is not directly impacting the business logic of
+the config_resolver package.
+"""
+
+import sys
+
+
+class PrefixFilter(object):
+    """
+    A logging filter which prefixes each message with a given text.
+
+    :param prefix: The log prefix.
+    :param separator: A string to put between the prefix and the original log
+                      message.
+    """
+    # pylint: disable = too-few-public-methods
+
+    def __init__(self, prefix, separator=' '):
+        self._prefix = prefix
+        self._separator = separator
+
+    def __eq__(self, other):
+        # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
+        # when running the unit-tests through ``sniffer``. Does this have
+        # something to do with ``sniffer`` or is there something wrong with the
+        # code of ``config_resolver``? This is a workaround which is incorrect,
+        # and could in extreme cases cause problems if there was another
+        # filter with the exact same class name and with a ``_prefix`` and
+        # ``_separator`` member. They would wrongly be assumed to be the same.
+        # I'll assume this won't happen for now.
+        # pylint: disable = protected-access
+        return (self.__class__.__name__ == other.__class__.__name__ and
+                other._prefix == self._prefix and
+                other._separator == self._separator)
+
+    def __repr__(self):
+        return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
+            self._prefix, self._separator)
+
+    def filter(self, record):
+        # pylint: disable = missing-docstring
+        record.msg = self._separator.join([self._prefix, record.msg])
+        return True
+
+
+try:
+    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
+except ImportError:
+    from configparser import ConfigParser, NoOptionError, NoSectionError
+
+if sys.hexversion < 0x030000F0:
+    # Python 2
+    # pylint: disable = too-few-public-methods
+    class ConfigResolverBase(SafeConfigParser, object):
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
+else:
+    # Python 3
+    # pylint: disable = too-few-public-methods
+    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
+        """
+        A default "base" object simplifying Python 2 and Python 3
+        compatibility.
+        """
+
+

@@ -1,5 +1,5 @@
-User Manual
-===========
+config_resolver
+===============
 
 .. image:: https://travis-ci.org/exhuma/config_resolver.svg?branch=master
     :target: https://travis-ci.org/exhuma/config_resolver
@@ -22,7 +22,8 @@ configuration management. But it looks different everywhere. Both in code and
 in usage later on. Additionally, the operating system usually has some default,
 predictable place to look for configuration values. On Linux, this is ``/etc``
 and the `XDG Base Dir Spec
-<http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>`_.
+<https://standards.freedesktop.org/basedir-spec/0.8/>`_ (This instance is based
+on 0.8 of this spec).
 
 The code for finding these config files is always the same. But finding config
 files can be more interesting than that:
@@ -41,11 +42,3 @@ files can be more interesting than that:
 module. The module uses no additional external modules (no additional
 dependencies, pure Python) so it can be used in any application without adding
 unnecessary bloat.
-
-One last thing that ``config_resolver`` provides, is a better handling of
-default values than instances of ``SafeConfigParser`` of the standard library.
-The stdlib config parser can only specify defaults for options without
-associating them to a section! This means that you cannot have two options with
-the same name in multiple sections with different default values.
-``config_resolver`` handles default values at the time you call ``.get()``,
-which makes it independent of the section.
