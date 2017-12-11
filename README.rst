@@ -22,7 +22,8 @@ configuration management. But it looks different everywhere. Both in code and
 in usage later on. Additionally, the operating system usually has some default,
 predictable place to look for configuration values. On Linux, this is ``/etc``
 and the `XDG Base Dir Spec
-<http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>`_.
+<https://standards.freedesktop.org/basedir-spec/0.8/>`_ (This instance is based
+on 0.8 of this spec).
 
 The code for finding these config files is always the same. But finding config
 files can be more interesting than that:
