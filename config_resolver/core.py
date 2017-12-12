@@ -8,7 +8,7 @@ from .exc import NoVersionError
 from .util import (
     PrefixFilter,
 )
-from configparser import ConfigParser, NoOptionError, NoSectionError
+from configparser import ConfigParser
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join, abspath
 import logging
@@ -225,46 +225,6 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                     file_version)
                 return True
         return True
-
-    def get(self, section, option, **kwargs):
-        """
-        Overrides :py:meth:`configparser.ConfigParser.get`.
-
-        In addition to ``section`` and ``option``, this call takes an optional
-        ``default`` value. This behaviour works in *addition* to the
-        :py:class:`configparser.ConfigParser` default mechanism. Note that
-        a default value from ``ConfigParser`` takes precedence.
-
-        The reason this additional functionality is added, is because the
-        defaults of :py:class:`configparser.ConfigParser` are not dependent
-        on sections. If you specify a default for the option ``test``, then
-        this value will be returned for both ``section1.test`` and for
-        ``section2.test``. Using the default on the ``get`` call gives you more
-        fine-grained control over this.
-
-        Also note, that if a default value was used, it will be logged with
-        level ``logging.DEBUG``.
-
-        :param section: The config file section.
-        :param option: The option name.
-        :param kwargs: These keyword args are passed through to
-                       :py:meth:`configparser.ConfigParser.get`.
-        """
-        if "default" in kwargs:
-            default = kwargs.pop("default")
-            have_default = True
-        else:
-            have_default = False
-
-        try:
-            value = super(Config, self).get(section, option, **kwargs)
-            return value
-        except (NoSectionError, NoOptionError) as exc:
-            if have_default:
-                self._log.debug("%s: Returning default value %r", exc, default)
-                return default
-            else:
-                raise
 
     def load(self, reload=False, require_load=False):
         """

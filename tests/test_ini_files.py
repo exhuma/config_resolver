@@ -126,10 +126,10 @@ class SimpleInitTest(unittest.TestCase):
         self.assertEqual(self.cfg.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        self.assertIs(self.cfg.get('section1', 'b', default=None), None)
+        self.assertIs(self.cfg.get('section1', 'b', fallback=None), None)
 
     def test_no_section_error(self):
-        self.assertIs(self.cfg.get('a', 'b', default=None), None)
+        self.assertIs(self.cfg.get('a', 'b', fallback=None), None)
 
 
 class AdvancedInitTest(unittest.TestCase):
