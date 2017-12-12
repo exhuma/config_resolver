@@ -1,6 +1,6 @@
 from os.path import dirname, join
 
-from .core import Config, SecuredConfig, NoVersionError  # NOQA
+from .core import get_config, Config, SecuredConfig, NoVersionError  # NOQA
 
 
 with open(join(dirname(__file__), 'version.txt')) as fptr:

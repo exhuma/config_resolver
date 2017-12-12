@@ -11,8 +11,7 @@ from textwrap import dedent
 from unittest.mock import patch
 
 from config_resolver import (
-    Config,
-    SecuredConfig,
+    get_config,
     NoVersionError,
 )
 
@@ -98,7 +97,7 @@ class SimpleInitFromContent(unittest.TestCase):
     '''
 
     def setUp(self):
-        self.cfg = Config('not', 'existing', search_path='testdata')
+        self.cfg = get_config('not', 'existing', search_path='testdata')
         self.cfg.read_string(dedent(
             '''\
             [section_mem]
@@ -116,7 +115,7 @@ class SimpleInitFromContent(unittest.TestCase):
 class SimpleInitTest(unittest.TestCase):
 
     def setUp(self):
-        self.cfg = Config('hello', 'world', search_path='testdata')
+        self.cfg = get_config('hello', 'world', search_path='testdata')
 
     def test_simple_init(self):
         self.assertTrue(self.cfg.has_section('section1'))
@@ -150,7 +149,7 @@ class AdvancedInitTest(unittest.TestCase):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = Config('hello', 'world')
+            cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
                     '/etc/xdg/hello/world/test.ini',
                     expanduser('~/.hello/world/test.ini'),
@@ -162,7 +161,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_name_override(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        Config('hello', 'world')
+        get_config('hello', 'world')
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
         self.catcher.assert_contains(
@@ -172,7 +171,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path(self):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
-        cfg = Config('hello', 'world')
+        cfg = get_config('hello', 'world')
         expected = ['testdata/app.ini',
                     'testdata/a/app.ini',
                     'testdata/b/app.ini']
@@ -182,7 +181,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_override_log(self):
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
-        Config('hello', 'world')
+        get_config('hello', 'world')
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
         self.catcher.assert_contains(
@@ -194,7 +193,7 @@ class AdvancedInitTest(unittest.TestCase):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = Config('hello', 'world')
+            cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
                     '/etc/xdg/hello/world/app.ini',
                     expanduser('~/.hello/world/app.ini'),
@@ -208,7 +207,7 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path_add_log(self):
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        Config('hello', 'world')
+        get_config('hello', 'world')
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
         self.catcher.assert_contains(
@@ -217,8 +216,8 @@ class AdvancedInitTest(unittest.TestCase):
             msg)
 
     def test_search_path(self):
-        cfg = Config('hello', 'world',
-                     search_path='testdata:testdata/a:testdata/b')
+        cfg = get_config('hello', 'world',
+                         search_path='testdata:testdata/a:testdata/b')
         self.assertTrue(cfg.has_section('section3'))
         self.assertEqual(cfg.get('section1', 'var1'), 'frob')
         self.assertEqual(
@@ -226,12 +225,12 @@ class AdvancedInitTest(unittest.TestCase):
             ['testdata/app.ini', 'testdata/a/app.ini', 'testdata/b/app.ini'])
 
     def test_filename(self):
-        cfg = Config('hello', 'world', filename='test.ini',
-                     search_path='testdata')
+        cfg = get_config('hello', 'world', filename='test.ini',
+                         search_path='testdata')
         self.assertEqual(cfg.get('section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
-        cfg = Config('hello', 'world')
+        cfg = get_config('hello', 'world')
         self.assertEqual(cfg.group_name, 'hello')
         self.assertEqual(cfg.app_name, 'world')
 
@@ -248,12 +247,12 @@ class FunctionalityTests(unittest.TestCase):
         self.catcher.reset()
 
     def test_mandatory_section(self):
-        config = Config('hello', 'world', search_path='testdata')
+        config = get_config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoSectionError):
             config.get('nosuchsection', 'nosuchoption')
 
     def test_mandatory_option(self):
-        config = Config('hello', 'world', search_path='testdata')
+        config = get_config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoOptionError):
             config.get('section1', 'nosuchoption')
 
@@ -262,8 +261,8 @@ class FunctionalityTests(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        SecuredConfig('hello', 'world', filename='test.ini',
-                      search_path='testdata')
+        get_config('hello', 'world', filename='test.ini',
+                   search_path='testdata', secure=True)
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
@@ -273,8 +272,8 @@ class FunctionalityTests(unittest.TestCase):
             expected_message)
 
     def test_unsecured_file(self):
-        conf = SecuredConfig('hello', 'world', filename='test.ini',
-                             search_path='testdata')
+        conf = get_config('hello', 'world', filename='test.ini',
+                          search_path='testdata', secure=True)
         self.assertNotIn(join('testdata', 'test.ini'), conf.loaded_files)
 
     def test_secured_file(self):
@@ -287,28 +286,28 @@ class FunctionalityTests(unittest.TestCase):
         path = join('testdata', 'secure.ini')
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
-        conf = SecuredConfig('hello', 'world', filename='secure.ini',
-                             search_path='testdata')
+        conf = get_config('hello', 'world', filename='secure.ini',
+                          search_path='testdata', secure=True)
         self.assertIn(path, conf.loaded_files)
 
     def test_secured_nonexisting_file(self):
-        conf = SecuredConfig('hello', 'world', filename='nonexisting.ini',
-                             search_path='testdata')
+        conf = get_config('hello', 'world', filename='nonexisting.ini',
+                          search_path='testdata', secure=True)
         self.assertNotIn(join('testdata', 'nonexisting.ini'),
                          conf.loaded_files)
 
     def test_file_not_found_exception(self):
         with self.assertRaises(IOError):
-            Config('hello', 'world', filename='nonexisting.ini',
-                   search_path='testdata', require_load=True)
+            get_config('hello', 'world', filename='nonexisting.ini',
+                       search_path='testdata', require_load=True)
 
     def test_no_version_found_warning(self):
         with self.assertRaises(NoVersionError):
-            Config('hello', 'world', search_path='testdata', version='1.1')
+            get_config('hello', 'world', search_path='testdata', version='1.1')
 
     def test_mismatching_major(self):
-        config = Config('hello', 'world', search_path='testdata/versioned',
-                        version='1.1')
+        config = get_config('hello', 'world', search_path='testdata/versioned',
+                            version='1.1')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -330,8 +329,8 @@ class FunctionalityTests(unittest.TestCase):
         self.assertEqual(config.loaded_files, [])
 
     def test_mismatching_minor(self):
-        Config('hello', 'world', search_path='testdata/versioned',
-               version='2.0')
+        get_config('hello', 'world', search_path='testdata/versioned',
+                   version='2.0')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -352,9 +351,9 @@ class FunctionalityTests(unittest.TestCase):
         files even if the application did not explicitly request a version
         number!
         """
-        Config('hello', 'world',
-               filename='mismatch.ini',
-               search_path='testdata/versioned:testdata/versioned2')
+        get_config('hello', 'world',
+                   filename='mismatch.ini',
+                   search_path='testdata/versioned:testdata/versioned2')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -371,7 +370,7 @@ class FunctionalityTests(unittest.TestCase):
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME=''):
-            cfg = Config('foo', 'bar')
+            cfg = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
@@ -384,7 +383,7 @@ class FunctionalityTests(unittest.TestCase):
     def test_xdg_empty_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='',
                          XDG_CONFIG_HOME=''):
-            cfg = Config('foo', 'bar')
+            cfg = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -396,7 +395,7 @@ class FunctionalityTests(unittest.TestCase):
     def test_xdg_config_home(self):
         with environment(XDG_CONFIG_HOME='/path/to/config/home',
                          XDG_CONFIG_DIRS=''):
-            cfg = Config('foo', 'bar')
+            cfg = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -408,7 +407,7 @@ class FunctionalityTests(unittest.TestCase):
     def test_xdg_empty_config_home(self):
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = Config('foo', 'bar')
+            cfg = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -420,7 +419,7 @@ class FunctionalityTests(unittest.TestCase):
     def test_both_xdg_variables(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME='/xdg/config/home'):
-            cfg = Config('foo', 'bar')
+            cfg = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
@@ -439,7 +438,7 @@ class FunctionalityTests(unittest.TestCase):
         """
         with patch('config_resolver.Config.check_file') as checker_mock:
             checker_mock.return_value = (True, "")
-            Config('hello', 'world')
+            get_config('hello', 'world')
             expected_message = (
                 "DEPRECATION WARNING: The file '{home}/.hello/world/app.ini' "
                 "was loaded. The XDG Basedir standard requires this file to "
@@ -457,8 +456,8 @@ class FunctionalityTests(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        Config('hello', 'world', search_path='testdata/versioned',
-               version='2.0')
+        get_config('hello', 'world', search_path='testdata/versioned',
+                   version='2.0')
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -468,8 +467,8 @@ class FunctionalityTests(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        Config('hello', 'world', search_path='testdata/versioned',
-               version='5.0')
+        get_config('hello', 'world', search_path='testdata/versioned',
+                   version='5.0')
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -479,15 +478,15 @@ class FunctionalityTests(unittest.TestCase):
 class Regressions(unittest.TestCase):
 
     def setUp(self):
-        self.cfg = Config('hello', 'world', search_path='testdata')
+        self.cfg = get_config('hello', 'world', search_path='testdata')
 
     def test_multiple_log_prefixes(self):
         """
         The new log message prefixes are multiplied if more than one config
         instance is created!
         """
-        Config('foo', 'bar')
-        cfg = Config('foo', 'bar')
+        get_config('foo', 'bar')
+        cfg = get_config('foo', 'bar')
         self.assertEqual(len(cfg._log.filters), 1)
 
 

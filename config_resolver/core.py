@@ -16,6 +16,22 @@ import stat
 from distutils.version import StrictVersion
 
 
+def get_config(*args, **kwargs):
+    '''
+    Factory function to retrieve new config instances.
+
+    All arguments are currently passed on to either :py:class:`~.Config` or
+    :py:class:`~.SecuredConfig`. Which one is chosen depends on the ``secure``
+    kwarg. If it is True then a ``SecuredConfig`` will be returned. Otherwise
+    (or if missing) it will return a normal ``Config`` instance.
+    '''
+    is_secure = kwargs.pop('secure', False)
+    if is_secure:
+        return SecuredConfig(*args, **kwargs)
+    else:
+        return Config(*args, **kwargs)
+
+
 class Config(ConfigParser):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
