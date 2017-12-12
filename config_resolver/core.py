@@ -7,10 +7,8 @@ the end-user of the application to override this lookup process.
 from .exc import NoVersionError
 from .util import (
     PrefixFilter,
-    ConfigResolverBase,
-    NoSectionError,
-    NoOptionError,
 )
+from configparser import ConfigParser, NoOptionError, NoSectionError
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join, abspath
 import logging
@@ -18,7 +16,7 @@ import stat
 from distutils.version import StrictVersion
 
 
-class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
+class Config(ConfigParser):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
     :param app_name: an application identifier (f.ex.: the application
@@ -170,7 +168,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
             return False
 
         # Check if the file is version-compatible with this instance.
-        new_config = ConfigResolverBase()
+        new_config = ConfigParser()
         new_config.read(filename)
         if self.version and not new_config.has_option('meta', 'version'):
             # self.version is set, so we MUST have a version in the file!

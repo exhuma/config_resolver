@@ -5,29 +5,17 @@ import re
 import stat
 import sys
 import unittest
+from configparser import NoOptionError, NoSectionError
 from os.path import expanduser, join, abspath
 from textwrap import dedent
-
-try:
-    from ConfigParser import NoOptionError, NoSectionError
-except ImportError:
-    from configparser import NoOptionError, NoSectionError
-
-try:
-    from mock import patch
-    have_mock = True
-except ImportError:
-    try:
-        from unittest.mock import patch
-        have_mock = True
-    except ImportError:
-        have_mock = False
+from unittest.mock import patch
 
 from config_resolver import (
     Config,
     SecuredConfig,
     NoVersionError,
 )
+
 
 @contextmanager
 def environment(**kwargs):
@@ -104,7 +92,6 @@ class TestableHandler(logging.Handler):
         del self.records[:]
 
 
-@unittest.skipUnless(sys.version_info > (3, 0), 'Test only valid in Python 2')
 class SimpleInitFromContent(unittest.TestCase):
     '''
     Tests loading a config string from memory
@@ -443,7 +430,6 @@ class FunctionalityTests(unittest.TestCase):
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
 
-    @unittest.skipUnless(have_mock, "mock module is not available")
     def test_xdg_deprecation(self):
         """
         ~/.group/app/app.ini should issue a deprecation warning.
