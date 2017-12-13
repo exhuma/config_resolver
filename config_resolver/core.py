@@ -146,8 +146,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         # default search path
         path = (['/etc/%s/%s' % (self.group_name, self.app_name)] +
                 self.get_xdg_dirs() +
-                [expanduser('~/.%s/%s' % (self.group_name, self.app_name)),
-                 self.get_xdg_home(),
+                [self.get_xdg_home(),
                  join(getcwd(), '.{}'.format(self.group_name), self.app_name)])
 
         # If a path was passed directly to this instance, override the path.
@@ -264,18 +263,6 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                 action = 'Updating' if self.loaded_files else 'Loading initial'
                 self._log.info('%s config from %s', action, conf_name)
                 self.read(conf_name)
-                if conf_name == expanduser("~/.%s/%s/%s" % (
-                        self.group_name, self.app_name, self.filename)):
-                    self._log.warning(
-                        "DEPRECATION WARNING: The file "
-                        "'%s/.%s/%s/app.ini' was loaded. The XDG "
-                        "Basedir standard requires this file to be in "
-                        "'%s/.config/%s/%s/app.ini'! This location "
-                        "will no longer be parsed in a future version of "
-                        "config_resolver! You can already (and should) move "
-                        "the file!", expanduser("~"), self.group_name,
-                        self.app_name, expanduser("~"), self.group_name,
-                        self.app_name)
                 self.loaded_files.append(conf_name)
 
         if not self.loaded_files and not require_load:

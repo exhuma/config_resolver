@@ -152,7 +152,6 @@ class AdvancedInitTest(unittest.TestCase):
             cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
                     '/etc/xdg/hello/world/test.ini',
-                    expanduser('~/.hello/world/test.ini'),
                     expanduser('~/.config/hello/world/test.ini'),
                     '{}/.hello/world/test.ini'.format(os.getcwd())]
         self.assertEqual(
@@ -196,7 +195,6 @@ class AdvancedInitTest(unittest.TestCase):
             cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
                     '/etc/xdg/hello/world/app.ini',
-                    expanduser('~/.hello/world/app.ini'),
                     expanduser('~/.config/hello/world/app.ini'),
                     '{}/.hello/world/app.ini'.format(os.getcwd()),
                     'testdata/app.ini',
@@ -375,7 +373,6 @@ class FunctionalityTests(unittest.TestCase):
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
                 '/xdgpath1/foo/bar/app.ini',
-                expanduser('~/.foo/bar/app.ini'),
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
@@ -387,7 +384,6 @@ class FunctionalityTests(unittest.TestCase):
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
-                expanduser('~/.foo/bar/app.ini'),
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
@@ -399,7 +395,6 @@ class FunctionalityTests(unittest.TestCase):
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
-                expanduser('~/.foo/bar/app.ini'),
                 '/path/to/config/home/foo/bar/app.ini',
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
@@ -411,7 +406,6 @@ class FunctionalityTests(unittest.TestCase):
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
-                expanduser('~/.foo/bar/app.ini'),
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
@@ -424,33 +418,9 @@ class FunctionalityTests(unittest.TestCase):
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
                 '/xdgpath1/foo/bar/app.ini',
-                expanduser('~/.foo/bar/app.ini'),
                 '/xdg/config/home/foo/bar/app.ini',
                 abspath('.foo/bar/app.ini')
             ], cfg.active_path)
-
-    def test_xdg_deprecation(self):
-        """
-        ~/.group/app/app.ini should issue a deprecation warning.
-
-        NOTE: This is a *user* warning. Not a developer warning! So we'll use
-        the logging module instead of the warnings module!
-        """
-        with patch('config_resolver.Config.check_file') as checker_mock:
-            checker_mock.return_value = (True, "")
-            get_config('hello', 'world')
-            expected_message = (
-                "DEPRECATION WARNING: The file '{home}/.hello/world/app.ini' "
-                "was loaded. The XDG Basedir standard requires this file to "
-                "be in '{home}/.config/hello/world/app.ini'! This location "
-                "will no longer be parsed in a future version of "
-                "config_resolver! You can already (and should) move the "
-                "file!".format(
-                    home=expanduser("~")))
-            self.catcher.assert_contains(
-                'config_resolver.hello.world',
-                logging.WARNING,
-                expected_message)
 
     def test_filename_in_log_minor(self):
         """
