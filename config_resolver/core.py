@@ -272,6 +272,8 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
+
+        search_path = search_path or []
         self._log = prefixed_logger(config_id)
 
         self.version = StrictVersion(version) if version else None
