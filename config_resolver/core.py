@@ -332,7 +332,12 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         self.active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
-            readable = self.check_file(conf_name)
+            readable = is_readable(
+                self.config_id,
+                conf_name,
+                version=self.version,
+                secure=self.SECURE
+            )
             if readable:
                 action = 'Updating' if self.loaded_files else 'Loading initial'
                 self._log.info('%s config from %s', action, conf_name)
@@ -348,16 +353,6 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
         # XXX -- end
-
-    def check_file(self, filename):
-        """
-        Overrides :py:meth:`.Config.check_file`
-        """
-        return is_readable(
-            self.config_id,
-            filename,
-            version=self.version,
-            secure=self.SECURE)
 
 
 class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
