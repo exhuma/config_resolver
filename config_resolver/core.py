@@ -8,12 +8,16 @@ from .exc import NoVersionError
 from .util import (
     PrefixFilter,
 )
+from collections import namedtuple
 from configparser import ConfigParser
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 from distutils.version import StrictVersion
+
+
+ConfigID = namedtuple('ConfigID', 'group app')
 
 
 def get_config(*args, **kwargs):
@@ -26,27 +30,28 @@ def get_config(*args, **kwargs):
     (or if missing) it will return a normal ``Config`` instance.
     '''
     is_secure = kwargs.pop('secure', False)
+    combined_args = [ConfigID(args[0], args[1])] + list(args[2:])
     if is_secure:
-        return SecuredConfig(*args, **kwargs)
+        return SecuredConfig(*combined_args, **kwargs)
     else:
-        return Config(*args, **kwargs)
+        return Config(*combined_args, **kwargs)
 
 
-def prefixed_logger(group_name, app_name):
+def prefixed_logger(config_id):
     '''
     Returns a log instance for a given group- & app-name pair.
     '''
     log = logging.getLogger('config_resolver.{}.{}'.format(
-        group_name,
-        app_name))
+        config_id.group,
+        config_id.app))
     prefix_filter = PrefixFilter('group={}:app={}'.format(
-        group_name, app_name), separator=':')
+        config_id.group, config_id.app), separator=':')
     if prefix_filter not in log.filters:
         log.addFilter(prefix_filter)
     return log
 
 
-def get_xdg_dirs(group_name, app_name):
+def get_xdg_dirs(config_id):
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
     variable or the appropriate default.
@@ -54,50 +59,51 @@ def get_xdg_dirs(group_name, app_name):
     The list is sorted by precedence, with the most important item coming
     *last* (required by the existing config_resolver logic).
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
     config_dirs = getenv('XDG_CONFIG_DIRS', '')
     if config_dirs:
         log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
         output = []
         for path in reversed(config_dirs.split(':')):
-            output.append(join(path, group_name, app_name))
+            output.append(join(path, config_id.group, config_id.app))
         return output
-    return ['/etc/xdg/%s/%s' % (group_name, app_name)]
+    return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
 
 
-def get_xdg_home(group_name, app_name):
+def get_xdg_home(config_id):
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
     or the appropriate default.
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
     config_home = getenv('XDG_CONFIG_HOME', '')
     if config_home:
         log.debug('XDG_CONFIG_HOME is set to %r', config_home)
-        return expanduser(join(config_home, group_name, app_name))
-    return expanduser('~/.config/%s/%s' % (group_name, app_name))
+        return expanduser(join(config_home, config_id.group, config_id.app))
+    return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
 
 
-def effective_path(group_name, app_name, search_path=''):
+def effective_path(config_id, search_path=''):
     """
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
     settings from the first one.
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
 
     # default search path
-    path = (['/etc/%s/%s' % (group_name, app_name)] +
-            get_xdg_dirs(group_name, app_name) +
-            [get_xdg_home(group_name, app_name),
-             join(getcwd(), '.{}'.format(group_name), app_name)])
+    path = (['/etc/%s/%s' % (config_id.group, config_id.app)] +
+            get_xdg_dirs(config_id) +
+            [get_xdg_home(config_id),
+             join(getcwd(), '.{}'.format(config_id.group), config_id.app)])
 
     # If a path was passed directly to this instance, override the path.
     if search_path:
         path = search_path.split(pathsep)
 
     # Next, consider the environment variables...
-    env_path_name = "%s_%s_PATH" % (group_name.upper(), app_name.upper())
+    env_path_name = "%s_%s_PATH" % (
+        config_id.group.upper(), config_id.app.upper())
     env_path = getenv(env_path_name)
 
     if env_path and env_path.startswith('+'):
@@ -119,38 +125,36 @@ def effective_path(group_name, app_name, search_path=''):
     return path
 
 
-def find_files(group_name, app_name, search_path=None, filename='app.ini', secure=False):
+def find_files(config_id, search_path=None, filename='app.ini', secure=False):
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
-    :param group_name: an application group (f. ex.: your company name)
-    :param app_name: an application identifier (f.ex.: the application
-                     module name)
+    :param config_id: A "ConfigID" object used to identify the config folder.
     :param search_path: The path can use OS specific separators (f.ex.: ``:``
         on posix, ``;`` on windows) to specify multiple folders. These
         folders will be searched in the specified order.
     :param filename: The name of the file we search for.
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
 
-    path = effective_path(group_name, app_name, search_path)
-    config_filename = effective_filename(group_name, app_name, filename)
+    path = effective_path(config_id, search_path)
+    config_filename = effective_filename(config_id, filename)
 
     # Next, use the resolved path to find the filenames. Keep track of
     # which files we loaded in order to inform the user.
     for dirname in path:
         conf_name = join(dirname, config_filename)
-        if is_readable(group_name, app_name, conf_name, secure=secure):
+        if is_readable(config_id, conf_name, secure=secure):
             log.info('Found file at %s', conf_name)
             yield conf_name
 
 
-def effective_filename(group_name, app_name, custom_filename):
+def effective_filename(config_id, custom_filename):
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
 
     # same logic for the configuration filename. First, check if we were
     # initialized with a filename...
@@ -159,27 +163,27 @@ def effective_filename(group_name, app_name, custom_filename):
         config_filename = custom_filename
 
     # ... next, take the value from the environment
-    env_filename = getenv(env_name(group_name, app_name))
+    env_filename = getenv(env_name(config_id))
     if env_filename:
         log.info('Configuration filename was overridden with %r '
                  'by the environment variable %s.',
                  env_filename,
-                 env_name(group_name, app_name))
+                 env_name(config_id))
         config_filename = env_filename
 
     return config_filename
 
 
-def env_name(group_name, app_name):
-    return "%s_%s_FILENAME" % (group_name.upper(), app_name.upper())
+def env_name(config_id):
+    return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(group_name, app_name, filename, version=None, secure=False):
+def is_readable(config_id, filename, version=None, secure=False):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
     """
-    log = prefixed_logger(group_name, app_name)
+    log = prefixed_logger(config_id)
 
     if not exists(filename):
         return False
@@ -246,8 +250,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
     will extend/override existing value and that the last file will take
     precedence.
 
-    :param group_name: Forwarded to :py:func:`.find_files`.
-    :param app_name: Forwarded to :py:func:`.find_files`.
+    :param config_id: Forwarded to :py:func:`.find_files`.
     :param search_path: Forwarded to :py:func:`.find_files`.
     :param filename: Forwarded to :py:func:`.find_files`.
     :param require_load: If this is set to ``True``, creation of the config
@@ -264,17 +267,18 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
 
     SECURE = False
 
-    def __init__(self, group_name, app_name, search_path=None,
+    def __init__(self, config_id, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
-        self._log = prefixed_logger(group_name, app_name)
+        self._log = prefixed_logger(config_id)
 
         self.version = StrictVersion(version) if version else None
         self.config = None
-        self.group_name = group_name
-        self.app_name = app_name
+        self.config_id = config_id
+        self.group_name = config_id.group
+        self.app_name = config_id.app
         self.filename = filename
         self.loaded_files = []
         self.load(search_path, require_load=require_load)
@@ -304,8 +308,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
             return
 
         files = find_files(
-            self.group_name,
-            self.app_name,
+            self.config_id,
             search_path,
             self.filename,
             self.SECURE)
@@ -321,9 +324,8 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                           "was %r" % (self.filename, search_path))
 
         # XXX -- begin
-        path = effective_path(self.group_name, self.app_name, search_path)
-        config_filename = effective_filename(
-            self.group_name, self.app_name, self.filename)
+        path = effective_path(self.config_id, search_path)
+        config_filename = effective_filename(self.config_id, self.filename)
 
         # Next, use the resolved path to find the filenames. Keep track of
         # which files we loaded in order to inform the user.
@@ -352,8 +354,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         Overrides :py:meth:`.Config.check_file`
         """
         return is_readable(
-            self.group_name,
-            self.app_name,
+            self.config_id,
             filename,
             version=self.version,
             secure=self.SECURE)
