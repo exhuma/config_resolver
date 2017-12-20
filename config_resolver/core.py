@@ -4,6 +4,7 @@ for config files and loads them if found. It provides a framework independed
 way of handling configuration files. Additional care has been taken to allow
 the end-user of the application to override this lookup process.
 """
+
 from .exc import NoVersionError
 from .util import (
     PrefixFilter,
@@ -125,7 +126,7 @@ def effective_path(config_id, search_path=''):
     return path
 
 
-def find_files(config_id, search_path=None, filename='app.ini', secure=False):
+def find_files(config_id, search_path=None, filename=None, secure=False):
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -158,7 +159,7 @@ def effective_filename(config_id, custom_filename):
 
     # same logic for the configuration filename. First, check if we were
     # initialized with a filename...
-    config_filename = None
+    config_filename = 'app.ini'
     if custom_filename:
         config_filename = custom_filename
 
@@ -186,7 +187,9 @@ def is_readable(config_id, filename, version=None, secure=False):
     log = prefixed_logger(config_id)
 
     if not exists(filename):
+        log.debug('Skipping %s (File not found).', filename)
         return False
+    log.debug('Checking if %s is readable.', filename)
 
     insecure_readable = True
     file_version = None
@@ -268,7 +271,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
     SECURE = False
 
     def __init__(self, config_id, search_path=None,
-                 filename='app.ini', require_load=False, version=None,
+                 filename=None, require_load=False, version=None,
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
@@ -281,7 +284,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         self.config_id = config_id
         self.group_name = config_id.group
         self.app_name = config_id.app
-        self.filename = filename
+        self.filename = effective_filename(config_id, filename)
         self.loaded_files = []
         self.load(search_path, require_load=require_load)
 
@@ -315,46 +318,39 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
             self.filename,
             self.SECURE)
 
-        loaded_files = list(files)  # TODO this is incorrect!
-        if not loaded_files and not require_load:
-            self._log.warning(
-                "No config file named %s found! Search path was %r",
-                self.filename,
-                search_path)
-        elif not loaded_files and require_load:
-            raise IOError("No config file named %s found! Search path "
-                          "was %r" % (self.filename, search_path))
+        self.active_path = [join(_, self.filename)
+                            for _ in effective_path(self.config_id)]
 
-        # XXX -- begin
-        path = effective_path(self.config_id, search_path)
-        config_filename = effective_filename(self.config_id, self.filename)
-
-        # Next, use the resolved path to find the filenames. Keep track of
-        # which files we loaded in order to inform the user.
-        self.active_path = [join(_, config_filename) for _ in path]
-        for dirname in path:
-            conf_name = join(dirname, config_filename)
+        for file in files:
             readable = is_readable(
                 self.config_id,
-                conf_name,
+                file,
                 version=self.version,
                 secure=self.SECURE
             )
             if readable:
                 action = 'Updating' if self.loaded_files else 'Loading initial'
-                self._log.info('%s config from %s', action, conf_name)
-                self.read(conf_name)
-                self.loaded_files.append(conf_name)
+                self._log.info('%s config from %s', action, file)
+                self.read(file)
+                self.loaded_files.append(file)
 
         if not self.loaded_files and not require_load:
             self._log.warning(
                 "No config file named %s found! Search path was %r",
-                config_filename,
-                path)
+                self.filename,
+                search_path)
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
-                          "was %r" % (config_filename, path))
-        # XXX -- end
+                          "was %r" % (self.filename, search_path))
+
+        if not self.loaded_files and not require_load:
+            self._log.warning(
+                "No config file named %s found! Search path was %r",
+                self.filename,
+                search_path)
+        elif not self.loaded_files and require_load:
+            raise IOError("No config file named %s found! Search path "
+                          "was %r" % (self.filename, search_path))
 
 
 class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
