@@ -21,6 +21,16 @@ from distutils.version import StrictVersion
 ConfigID = namedtuple('ConfigID', 'group app')
 
 
+def from_string(data):
+    '''
+    Load a config from a string variable.
+    '''
+    # TODO: This still does not do any version checking!
+    new_config = ConfigParser()
+    new_config.read_string(data)
+    return new_config
+
+
 def get_config(*args, **kwargs):
     '''
     Factory function to retrieve new config instances.

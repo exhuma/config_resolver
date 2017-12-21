@@ -1,3 +1,8 @@
+'''
+Tests the default "INI" file parser.
+
+This also includes the main functionality tests.
+'''
 from contextlib import contextmanager
 import logging
 import os
@@ -11,8 +16,9 @@ from textwrap import dedent
 from unittest.mock import patch
 
 from config_resolver import (
-    get_config,
     NoVersionError,
+    from_string,
+    get_config,
 )
 
 
@@ -95,10 +101,10 @@ class SimpleInitFromContent(unittest.TestCase):
     '''
     Tests loading a config string from memory
     '''
+    # TODO: This should also check if the [meta] section is properly parsed!
 
     def setUp(self):
-        self.cfg = get_config('not', 'existing', search_path='testdata')
-        self.cfg.read_string(dedent(
+        self.cfg = from_string(dedent(
             '''\
             [section_mem]
             val = 1
