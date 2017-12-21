@@ -148,12 +148,10 @@ class AdvancedInitTest(unittest.TestCase):
 
     def tearDown(self):
         self.catcher.reset()
-        os.environ.pop('HELLO_WORLD_PATH', None)
-        os.environ.pop('HELLO_WORLD_FILENAME', None)
 
     def test_env_name(self):
-        os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        with environment(XDG_CONFIG_HOME='',
+        with environment(HELLO_WORLD_FILENAME='test.ini',
+                         XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
             cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
@@ -165,8 +163,8 @@ class AdvancedInitTest(unittest.TestCase):
             expected)
 
     def test_env_name_override(self):
-        os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        get_config('hello', 'world')
+        with environment(HELLO_WORLD_FILENAME='test.ini'):
+            get_config('hello', 'world')
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
         self.catcher.assert_contains(
@@ -175,8 +173,8 @@ class AdvancedInitTest(unittest.TestCase):
             msg)
 
     def test_env_path(self):
-        os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
-        cfg = get_config('hello', 'world')
+        with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
+            cfg = get_config('hello', 'world')
         expected = ['testdata/app.ini',
                     'testdata/a/app.ini',
                     'testdata/b/app.ini']
@@ -185,8 +183,8 @@ class AdvancedInitTest(unittest.TestCase):
             expected)
 
     def test_env_path_override_log(self):
-        os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
-        get_config('hello', 'world')
+        with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
+            get_config('hello', 'world')
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
         self.catcher.assert_contains(
@@ -195,8 +193,8 @@ class AdvancedInitTest(unittest.TestCase):
             msg)
 
     def test_env_path_add(self):
-        os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        with environment(XDG_CONFIG_HOME='',
+        with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b',
+                         XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
             cfg = get_config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
@@ -210,8 +208,8 @@ class AdvancedInitTest(unittest.TestCase):
             expected)
 
     def test_env_path_add_log(self):
-        os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        get_config('hello', 'world')
+        with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b'):
+            get_config('hello', 'world')
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
         self.catcher.assert_contains(
