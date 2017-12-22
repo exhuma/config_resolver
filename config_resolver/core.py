@@ -19,6 +19,12 @@ from distutils.version import StrictVersion
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
+LookupResult = namedtuple('LookupResult', 'config meta')
+LookupMetadata = namedtuple('LookupMetadata', [
+    'active_path',
+    'loaded_files',
+    'config_id'
+])
 
 
 def from_string(data):
@@ -28,7 +34,11 @@ def from_string(data):
     # TODO: This still does not do any version checking!
     new_config = ConfigParser()
     new_config.read_string(data)
-    return new_config
+    return LookupResult(new_config, LookupMetadata(
+        '<unknown>',
+        '<unknown>',
+        ConfigID('<unknown>', '<unknown>')
+    ))
 
 
 def get_config(*args, **kwargs):
@@ -41,11 +51,17 @@ def get_config(*args, **kwargs):
     (or if missing) it will return a normal ``Config`` instance.
     '''
     is_secure = kwargs.pop('secure', False)
-    combined_args = [ConfigID(args[0], args[1])] + list(args[2:])
+    config_id = ConfigID(args[0], args[1])
+    combined_args = [config_id] + list(args[2:])
     if is_secure:
-        return SecuredConfig(*combined_args, **kwargs)
+        output = SecuredConfig(*combined_args, **kwargs)
     else:
-        return Config(*combined_args, **kwargs)
+        output = Config(*combined_args, **kwargs)
+    return LookupResult(output, LookupMetadata(
+        output.active_path,
+        output.loaded_files,
+        config_id
+    ))
 
 
 def prefixed_logger(config_id):

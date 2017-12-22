@@ -97,48 +97,7 @@ class TestableHandler(logging.Handler):
         del self.records[:]
 
 
-class SimpleInitFromContent(unittest.TestCase):
-    '''
-    Tests loading a config string from memory
-    '''
-    # TODO: This should also check if the [meta] section is properly parsed!
-
-    def setUp(self):
-        self.cfg = from_string(dedent(
-            '''\
-            [section_mem]
-            val = 1
-            '''
-        ))
-
-    def test_sections_available(self):
-        self.assertTrue(self.cfg.has_section('section_mem'))
-
-    def test_getting_values(self):
-        self.assertEqual(self.cfg.get('section_mem', 'val'), '1')
-
-
-class SimpleInitTest(unittest.TestCase):
-
-    def setUp(self):
-        self.cfg = get_config('hello', 'world', search_path='testdata')
-
-    def test_simple_init(self):
-        self.assertTrue(self.cfg.has_section('section1'))
-
-    def test_get(self):
-        self.assertEqual(self.cfg.get('section1', 'var1'), 'foo')
-        self.assertEqual(self.cfg.get('section1', 'var2'), 'bar')
-        self.assertEqual(self.cfg.get('section2', 'var1'), 'baz')
-
-    def test_no_option_error(self):
-        self.assertIs(self.cfg.get('section1', 'b', fallback=None), None)
-
-    def test_no_section_error(self):
-        self.assertIs(self.cfg.get('a', 'b', fallback=None), None)
-
-
-class AdvancedInitTest(unittest.TestCase):
+class BaseTest(unittest.TestCase):
 
     def setUp(self):
         logger = logging.getLogger()
@@ -149,17 +108,50 @@ class AdvancedInitTest(unittest.TestCase):
     def tearDown(self):
         self.catcher.reset()
 
+    def test_from_string(self):
+        result = from_string(dedent(
+            '''\
+            [section_mem]
+            val = 1
+            '''
+        ))
+        cfg = result.config
+        self.assertTrue(cfg.has_section('section_mem'))
+        self.assertEqual(cfg.get('section_mem', 'val'), '1')
+
+    def test_simple_init(self):
+        result = get_config('hello', 'world', search_path='testdata')
+        cfg = result.config
+        self.assertTrue(cfg.has_section('section1'))
+
+    def test_get(self):
+        result = get_config('hello', 'world', search_path='testdata')
+        cfg = result.config
+        self.assertEqual(cfg.get('section1', 'var1'), 'foo')
+        self.assertEqual(cfg.get('section1', 'var2'), 'bar')
+        self.assertEqual(cfg.get('section2', 'var1'), 'baz')
+
+    def test_no_option_error(self):
+        result = get_config('hello', 'world', search_path='testdata')
+        cfg = result.config
+        self.assertIs(cfg.get('section1', 'b', fallback=None), None)
+
+    def test_no_section_error(self):
+        result = get_config('hello', 'world', search_path='testdata')
+        cfg = result.config
+        self.assertIs(cfg.get('a', 'b', fallback=None), None)
+
     def test_env_name(self):
         with environment(HELLO_WORLD_FILENAME='test.ini',
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = get_config('hello', 'world')
+            result = get_config('hello', 'world')
         expected = ['/etc/hello/world/test.ini',
                     '/etc/xdg/hello/world/test.ini',
                     expanduser('~/.config/hello/world/test.ini'),
                     '{}/.hello/world/test.ini'.format(os.getcwd())]
         self.assertEqual(
-            cfg.active_path,
+            result.meta.active_path,
             expected)
 
     def test_env_name_override(self):
@@ -174,12 +166,12 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_path(self):
         with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
-            cfg = get_config('hello', 'world')
+            result = get_config('hello', 'world')
         expected = ['testdata/app.ini',
                     'testdata/a/app.ini',
                     'testdata/b/app.ini']
         self.assertEqual(
-            cfg.active_path,
+            result.meta.active_path,
             expected)
 
     def test_env_path_override_log(self):
@@ -196,7 +188,7 @@ class AdvancedInitTest(unittest.TestCase):
         with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b',
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = get_config('hello', 'world')
+            result = get_config('hello', 'world')
         expected = ['/etc/hello/world/app.ini',
                     '/etc/xdg/hello/world/app.ini',
                     expanduser('~/.config/hello/world/app.ini'),
@@ -204,7 +196,7 @@ class AdvancedInitTest(unittest.TestCase):
                     'testdata/app.ini',
                     'testdata/a/app.ini', 'testdata/b/app.ini']
         self.assertEqual(
-            cfg.active_path,
+            result.meta.active_path,
             expected)
 
     def test_env_path_add_log(self):
@@ -218,45 +210,34 @@ class AdvancedInitTest(unittest.TestCase):
             msg)
 
     def test_search_path(self):
-        cfg = get_config('hello', 'world',
-                         search_path='testdata:testdata/a:testdata/b')
+        result = get_config('hello', 'world',
+                            search_path='testdata:testdata/a:testdata/b')
+        cfg = result.config
         self.assertTrue(cfg.has_section('section3'))
         self.assertEqual(cfg.get('section1', 'var1'), 'frob')
         self.assertEqual(
-            cfg.loaded_files,
+            result.meta.loaded_files,
             ['testdata/app.ini', 'testdata/a/app.ini', 'testdata/b/app.ini'])
 
     def test_filename(self):
-        cfg = get_config('hello', 'world', filename='test.ini',
-                         search_path='testdata')
-        self.assertEqual(cfg.get('section2', 'var1'), 'baz')
+        result = get_config('hello', 'world', filename='test.ini',
+                            search_path='testdata')
+        self.assertEqual(result.config.get('section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
-        cfg = get_config('hello', 'world')
-        self.assertEqual(cfg.group_name, 'hello')
-        self.assertEqual(cfg.app_name, 'world')
-
-
-class FunctionalityTests(unittest.TestCase):
-
-    def setUp(self):
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
-        self.catcher = TestableHandler()
-        logger.addHandler(self.catcher)
-
-    def tearDown(self):
-        self.catcher.reset()
+        result = get_config('hello', 'world')
+        self.assertEqual(result.meta.config_id.group, 'hello')
+        self.assertEqual(result.meta.config_id.app, 'world')
 
     def test_mandatory_section(self):
-        config = get_config('hello', 'world', search_path='testdata')
+        result = get_config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoSectionError):
-            config.get('nosuchsection', 'nosuchoption')
+            result.config.get('nosuchsection', 'nosuchoption')
 
     def test_mandatory_option(self):
-        config = get_config('hello', 'world', search_path='testdata')
+        result = get_config('hello', 'world', search_path='testdata')
         with self.assertRaises(NoOptionError):
-            config.get('section1', 'nosuchoption')
+            result.config.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')
@@ -274,9 +255,9 @@ class FunctionalityTests(unittest.TestCase):
             expected_message)
 
     def test_unsecured_file(self):
-        conf = get_config('hello', 'world', filename='test.ini',
-                          search_path='testdata', secure=True)
-        self.assertNotIn(join('testdata', 'test.ini'), conf.loaded_files)
+        result = get_config('hello', 'world', filename='test.ini',
+                            search_path='testdata', secure=True)
+        self.assertNotIn(join('testdata', 'test.ini'), result.meta.loaded_files)
 
     def test_secured_file(self):
         # make sure the file is secured. This information is lost through git so
@@ -288,15 +269,15 @@ class FunctionalityTests(unittest.TestCase):
         path = join('testdata', 'secure.ini')
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
-        conf = get_config('hello', 'world', filename='secure.ini',
-                          search_path='testdata', secure=True)
-        self.assertIn(path, conf.loaded_files)
+        result = get_config('hello', 'world', filename='secure.ini',
+                            search_path='testdata', secure=True)
+        self.assertIn(path, result.meta.loaded_files)
 
     def test_secured_nonexisting_file(self):
-        conf = get_config('hello', 'world', filename='nonexisting.ini',
-                          search_path='testdata', secure=True)
+        result = get_config('hello', 'world', filename='nonexisting.ini',
+                            search_path='testdata', secure=True)
         self.assertNotIn(join('testdata', 'nonexisting.ini'),
-                         conf.loaded_files)
+                         result.meta.loaded_files)
 
     def test_file_not_found_exception(self):
         with self.assertRaises(IOError):
@@ -308,7 +289,7 @@ class FunctionalityTests(unittest.TestCase):
             get_config('hello', 'world', search_path='testdata', version='1.1')
 
     def test_mismatching_major(self):
-        config = get_config('hello', 'world', search_path='testdata/versioned',
+        result = get_config('hello', 'world', search_path='testdata/versioned',
                             version='1.1')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
@@ -323,6 +304,7 @@ class FunctionalityTests(unittest.TestCase):
             logging.ERROR,
             '1.1')
 
+        config = result.config
         # Values should not be loaded. Let's check if they really are missing.
         # They should be!
         self.assertFalse('section1' in config.sections())
@@ -373,59 +355,59 @@ class FunctionalityTests(unittest.TestCase):
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME=''):
-            cfg = get_config('foo', 'bar')
+            result = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
                 '/xdgpath1/foo/bar/app.ini',
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
-            ], cfg.active_path)
+            ], result.meta.active_path)
 
     def test_xdg_empty_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='',
                          XDG_CONFIG_HOME=''):
-            cfg = get_config('foo', 'bar')
+            result = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
-            ], cfg.active_path)
+            ], result.meta.active_path)
 
     def test_xdg_config_home(self):
         with environment(XDG_CONFIG_HOME='/path/to/config/home',
                          XDG_CONFIG_DIRS=''):
-            cfg = get_config('foo', 'bar')
+            result = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
                 '/path/to/config/home/foo/bar/app.ini',
                 abspath('.foo/bar/app.ini')
-            ], cfg.active_path)
+            ], result.meta.active_path)
 
     def test_xdg_empty_config_home(self):
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            cfg = get_config('foo', 'bar')
+            result = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
                 expanduser('~/.config/foo/bar/app.ini'),
                 abspath('.foo/bar/app.ini')
-            ], cfg.active_path)
+            ], result.meta.active_path)
 
     def test_both_xdg_variables(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME='/xdg/config/home'):
-            cfg = get_config('foo', 'bar')
+            result = get_config('foo', 'bar')
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
                 '/xdgpath1/foo/bar/app.ini',
                 '/xdg/config/home/foo/bar/app.ini',
                 abspath('.foo/bar/app.ini')
-            ], cfg.active_path)
+            ], result.meta.active_path)
 
     def test_filename_in_log_minor(self):
         """
