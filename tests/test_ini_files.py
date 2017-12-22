@@ -115,31 +115,31 @@ class BaseTest(unittest.TestCase):
             val = 1
             '''
         ))
-        cfg = result.config
-        self.assertTrue(cfg.has_section('section_mem'))
-        self.assertEqual(cfg.get('section_mem', 'val'), '1')
+        config = result.config
+        self.assertTrue(config.has_section('section_mem'))
+        self.assertEqual(config.get('section_mem', 'val'), '1')
 
     def test_simple_init(self):
         result = get_config('hello', 'world', search_path='testdata')
-        cfg = result.config
-        self.assertTrue(cfg.has_section('section1'))
+        config = result.config
+        self.assertTrue(config.has_section('section1'))
 
     def test_get(self):
         result = get_config('hello', 'world', search_path='testdata')
-        cfg = result.config
-        self.assertEqual(cfg.get('section1', 'var1'), 'foo')
-        self.assertEqual(cfg.get('section1', 'var2'), 'bar')
-        self.assertEqual(cfg.get('section2', 'var1'), 'baz')
+        config = result.config
+        self.assertEqual(config.get('section1', 'var1'), 'foo')
+        self.assertEqual(config.get('section1', 'var2'), 'bar')
+        self.assertEqual(config.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
         result = get_config('hello', 'world', search_path='testdata')
-        cfg = result.config
-        self.assertIs(cfg.get('section1', 'b', fallback=None), None)
+        config = result.config
+        self.assertIs(config.get('section1', 'b', fallback=None), None)
 
     def test_no_section_error(self):
         result = get_config('hello', 'world', search_path='testdata')
-        cfg = result.config
-        self.assertIs(cfg.get('a', 'b', fallback=None), None)
+        config = result.config
+        self.assertIs(config.get('a', 'b', fallback=None), None)
 
     def test_env_name(self):
         with environment(HELLO_WORLD_FILENAME='test.ini',
@@ -212,9 +212,9 @@ class BaseTest(unittest.TestCase):
     def test_search_path(self):
         result = get_config('hello', 'world',
                             search_path='testdata:testdata/a:testdata/b')
-        cfg = result.config
-        self.assertTrue(cfg.has_section('section3'))
-        self.assertEqual(cfg.get('section1', 'var1'), 'frob')
+        config = result.config
+        self.assertTrue(config.has_section('section3'))
+        self.assertEqual(config.get('section1', 'var1'), 'frob')
         self.assertEqual(
             result.meta.loaded_files,
             ['testdata/app.ini', 'testdata/a/app.ini', 'testdata/b/app.ini'])
