@@ -450,20 +450,5 @@ class FunctionalityTests(unittest.TestCase):
             'testdata/versioned/app.ini')
 
 
-class Regressions(unittest.TestCase):
-
-    def setUp(self):
-        self.cfg = get_config('hello', 'world', search_path='testdata')
-
-    def test_multiple_log_prefixes(self):
-        """
-        The new log message prefixes are multiplied if more than one config
-        instance is created!
-        """
-        get_config('foo', 'bar')
-        cfg = get_config('foo', 'bar')
-        self.assertEqual(len(cfg._log.filters), 1)
-
-
 if __name__ == '__main__':
     unittest.main()
