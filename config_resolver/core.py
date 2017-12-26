@@ -42,22 +42,72 @@ def from_string(data, parser=None):
     ))
 
 
-def get_config(group_name, app_name, parser=None, *args, **kwargs):
+def get_config(group_name, app_name, lookup_options=None, parser=None):
     '''
     Factory function to retrieve new config instances.
 
     All arguments are currently passed on to either :py:class:`~.Config`.
     '''
     parser = parser or ini.Parser
-    is_secure = kwargs.pop('secure', False)
     config_id = ConfigID(group_name, app_name)
-    combined_args = [config_id] + list(args)
-    output = Config(secure=is_secure, parser=parser, *combined_args, **kwargs)
+    log = prefixed_logger(config_id)
+
+    lookup_options = lookup_options or {
+        'search_path': [],
+        'filename': 'app.ini',
+        'require_load': False,
+        'version': None,
+        'secure': False,
+    }
+
+    secure = lookup_options.get('secure', False)
+    require_load = lookup_options.get('require_load', False)
+    search_path = lookup_options.get('search_path', [])
+    filename = lookup_options.get('filename', 'app.ini')
+    filename = effective_filename(config_id, filename)
+    requested_version = lookup_options.get('version', None)
+    if requested_version:
+        version = StrictVersion(requested_version)
+    else:
+        version = None
+
+    loaded_files = []
+
+    # Store the complete list of all inspected items
+    active_path = [join(_, filename) for _ in effective_path(config_id)]
+
+    output = parser()
+    found_files = find_files(
+        config_id,
+        lookup_options.get('search_path'),
+        filename,
+        version=version,
+        secure=secure)
+
+    for filename, readability in found_files:
+        if readability.is_readable:
+            action = 'Updating' if loaded_files else 'Loading initial'
+            log.info('%s config from %s', action, filename)
+            output.update_from_file(filename)
+            loaded_files.append(filename)
+        else:
+            log.warning('Skipping unreadable file %s (%s)', filename, readability.reason)
+
+    if not loaded_files and not require_load:
+        log.warning(
+            "No config file named %s found! Search path was %r",
+            filename,
+            lookup_options['search_path'])
+    elif not loaded_files and require_load:
+        raise IOError("No config file named %s found! Search path "
+                      "was %r" % (filename, lookup_options['search_path']))
+
     return LookupResult(output, LookupMetadata(
-        output.active_path,
-        output.loaded_files,
+        active_path,
+        loaded_files,
         config_id
     ))
+
 
 
 def prefixed_logger(config_id):
@@ -170,7 +220,7 @@ def find_files(config_id, search_path=None, filename=None, version=None, secure=
         conf_name = join(dirname, config_filename)
         readability = is_readable(config_id, conf_name, version=version,
                                   secure=secure)
-        yield conf_name, readability.is_readable
+        yield conf_name, readability
 
 
 def effective_filename(config_id, custom_filename):
@@ -211,7 +261,6 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
     parser = parser or ini.Parser
 
     if not exists(filename):
-        log.debug('Skipping %s (File not found).', filename)
         return FileReadability(False, filename, 'File not found')
     log.debug('Checking if %s is readable.', filename)
 
@@ -268,118 +317,3 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
             log.warning(msg, filename)
             return FileReadability(False, filename, msg)
     return FileReadability(insecure_readable, filename, unreadable_reason)
-
-
-class Config:
-    """
-    Initialises a config object with files found on the search path.
-
-    If files are found one more than one location on the search path, the files
-    will be loaded incrementally. This means that each subsequent config file
-    will extend/override existing value and that the last file will take
-    precedence.
-
-    :param config_id: Forwarded to :py:func:`.find_files`.
-    :param search_path: Forwarded to :py:func:`.find_files`.
-    :param filename: Forwarded to :py:func:`.find_files`.
-    :param require_load: If this is set to ``True``, creation of the config
-        instance will raise an :py:exc:`OSError` if not a single file could be
-        loaded.
-    :param version: If specified (f.ex.: ``version='2.0'``), this will create a
-        versioned config instance. A versioned instance will only load config
-        files which have the same major version. On mismatch an error is logged
-        and the file is skipped. If the minor version differs the file will be
-        loaded, but issue a warning log. Version numbers are parsed using
-        :py:class:`distutils.version.StrictVersion`
-    :param secure: Passed to :py:meth:`.Config.load`
-    """
-    # pylint: disable = too-many-instance-attributes
-
-    def __init__(self, config_id, search_path=None, parser=None,
-                 filename=None, require_load=False, version=None, secure=False,
-                 **kwargs):
-        # pylint: disable = too-many-arguments
-        super(Config, self).__init__(**kwargs)
-
-        search_path = search_path or []
-        self._log = prefixed_logger(config_id)
-
-        self.version = StrictVersion(version) if version else None
-        self.config = None
-        self.config_id = config_id
-        self.group_name = config_id.group
-        self.app_name = config_id.app
-        self.filename = effective_filename(config_id, filename)
-        self.loaded_files = []
-        self.__parser = parser()
-        self.load(search_path, require_load=require_load, secure=secure)
-
-    def has_section(self, section_name):
-        return self.__parser.has_section(section_name)
-
-    def get(self, section, option, fallback=None):
-        return self.__parser.get(section, option, fallback)
-
-    def sections(self):
-        return self.__parser.sections()
-
-    def load(self, search_path, reload=False, require_load=False, secure=False):
-        """
-        Searches for an appropriate config file. If found, loads the file into
-        the current instance. This method can also be used to reload a
-        configuration. Note that you may want to set ``reload`` to ``True`` to
-        clear the configuration before loading in that case.  Without doing
-        that, values will remain available even if they have been removed from
-        the config files.
-
-        :param reload: if set to ``True``, the existing values are cleared
-                       before reloading.
-        :param require_load: If set to ``True`` this will raise a
-                             :py:exc:`IOError` if no config file has been found
-                             to load.
-        :param secure: If set to true, refuses to load files which are readable
-            by "group" or "other".
-        """
-        if reload:  # pragma: no cover
-            self.config = None
-
-        # only load the config if necessary (or explicitly requested)
-        if self.config:  # pragma: no cover
-            self._log.debug('Returning cached config instance. Use '
-                            '``reload=True`` to avoid caching!')
-            return
-
-        found_files = find_files(
-            self.config_id,
-            search_path,
-            self.filename,
-            version=self.version,
-            secure=secure)
-
-        self.active_path = [join(_, self.filename)
-                            for _ in effective_path(self.config_id)]
-
-        for file, readable in found_files:
-            if readable:
-                action = 'Updating' if self.loaded_files else 'Loading initial'
-                self._log.info('%s config from %s', action, file)
-                self.__parser.update_from_file(file)
-                self.loaded_files.append(file)
-
-        if not self.loaded_files and not require_load:
-            self._log.warning(
-                "No config file named %s found! Search path was %r",
-                self.filename,
-                search_path)
-        elif not self.loaded_files and require_load:
-            raise IOError("No config file named %s found! Search path "
-                          "was %r" % (self.filename, search_path))
-
-        if not self.loaded_files and not require_load:
-            self._log.warning(
-                "No config file named %s found! Search path was %r",
-                self.filename,
-                search_path)
-        elif not self.loaded_files and require_load:
-            raise IOError("No config file named %s found! Search path "
-                          "was %r" % (self.filename, search_path))

@@ -125,13 +125,13 @@ class BaseTest(unittest.TestCase):
         '''
         If we find a file named ``app.ini`` in ``search_path``, we load that.
         '''
-        result = get_config('hello', 'world', search_path='testdata',
+        result = get_config('hello', 'world', {'search_path': 'testdata'},
                             parser=self.PARSER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section1'))
 
     def test_get(self):
-        result = get_config('hello', 'world', search_path='testdata',
+        result = get_config('hello', 'world', {'search_path': 'testdata'},
                             parser=self.PARSER_CLASS)
         config = result.config
         self.assertEqual(config.get('section1', 'var1'), 'foo')
@@ -139,13 +139,13 @@ class BaseTest(unittest.TestCase):
         self.assertEqual(config.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        result = get_config('hello', 'world', search_path='testdata',
+        result = get_config('hello', 'world', {'search_path': 'testdata'},
                             parser=self.PARSER_CLASS)
         config = result.config
         self.assertIs(config.get('section1', 'b', fallback=None), None)
 
     def test_no_section_error(self):
-        result = get_config('hello', 'world', search_path='testdata',
+        result = get_config('hello', 'world', {'search_path': 'testdata'},
                             parser=self.PARSER_CLASS)
         config = result.config
         self.assertIs(config.get('a', 'b', fallback=None), None)
@@ -220,7 +220,7 @@ class BaseTest(unittest.TestCase):
 
     def test_search_path(self):
         result = get_config('hello', 'world',
-                            search_path='testdata:testdata/a:testdata/b',
+                            {'search_path': 'testdata:testdata/a:testdata/b'},
                             parser=self.PARSER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section3'))
@@ -230,13 +230,16 @@ class BaseTest(unittest.TestCase):
             ['testdata/app.ini', 'testdata/a/app.ini', 'testdata/b/app.ini'])
 
     def test_filename(self):
-        result = get_config('hello', 'world', filename='test.ini',
-                            search_path='testdata',
+        result = get_config('hello', 'world',
+                            {
+                                'filename': 'test.ini',
+                                'search_path': 'testdata',
+                            },
                             parser=self.PARSER_CLASS)
         self.assertEqual(result.config.get('section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
-        result = get_config('hello', 'world', self.PARSER_CLASS)
+        result = get_config('hello', 'world', parser=self.PARSER_CLASS)
         self.assertEqual(result.meta.config_id.group, 'hello')
         self.assertEqual(result.meta.config_id.app, 'world')
 
@@ -245,9 +248,14 @@ class BaseTest(unittest.TestCase):
         logger.setLevel(logging.DEBUG)
         catcher = TestableHandler()
         logger.addHandler(catcher)
-        get_config('hello', 'world', filename='test.ini',
-                   search_path='testdata', secure=True,
-                   parser=self.PARSER_CLASS)
+        get_config(
+            'hello', 'world',
+            {
+                'filename': 'test.ini',
+                'search_path': 'testdata',
+                'secure': True,
+            },
+            parser=self.PARSER_CLASS)
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
@@ -257,8 +265,12 @@ class BaseTest(unittest.TestCase):
             expected_message)
 
     def test_unsecured_file(self):
-        result = get_config('hello', 'world', filename='test.ini',
-                            search_path='testdata', secure=True,
+        result = get_config('hello', 'world',
+                            {
+                                'filename': 'test.ini',
+                                'search_path': 'testdata',
+                                'secure': True,
+                            },
                             parser=self.PARSER_CLASS)
         self.assertNotIn(join('testdata', 'test.ini'), result.meta.loaded_files)
 
@@ -272,32 +284,52 @@ class BaseTest(unittest.TestCase):
         path = join('testdata', 'secure.ini')
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
-        result = get_config('hello', 'world', filename='secure.ini',
-                            search_path='testdata', secure=True,
+        result = get_config('hello', 'world',
+                            {
+                                'filename': 'secure.ini',
+                                'search_path': 'testdata',
+                                'secure': True,
+                            },
                             parser=self.PARSER_CLASS)
         self.assertIn(path, result.meta.loaded_files)
 
     def test_secured_nonexisting_file(self):
-        result = get_config('hello', 'world', filename='nonexisting.ini',
-                            search_path='testdata', secure=True,
+        result = get_config('hello', 'world',
+                            {
+                                'filename': 'nonexisting.ini',
+                                'search_path': 'testdata',
+                                'secure': True,
+                            },
                             parser=self.PARSER_CLASS)
         self.assertNotIn(join('testdata', 'nonexisting.ini'),
                          result.meta.loaded_files)
 
     def test_file_not_found_exception(self):
         with self.assertRaises(IOError):
-            get_config('hello', 'world', filename='nonexisting.ini',
-                       search_path='testdata', require_load=True,
+            get_config('hello', 'world',
+                       {
+                           'filename': 'nonexisting.ini',
+                           'search_path': 'testdata',
+                           'require_load': True,
+                       },
                        parser=self.PARSER_CLASS)
 
     def test_no_version_found_warning(self):
         with self.assertRaises(NoVersionError):
-            get_config('hello', 'world', search_path='testdata', version='1.1',
+            get_config('hello', 'world',
+                       {
+                           'search_path': 'testdata',
+                           'version': '1.1',
+                       },
                        parser=self.PARSER_CLASS)
 
     def test_mismatching_major(self):
-        result = get_config('hello', 'world', search_path='testdata/versioned',
-                            version='1.1', parser=self.PARSER_CLASS)
+        result = get_config('hello', 'world',
+                            {
+                                'search_path': 'testdata/versioned',
+                                'version': '1.1',
+                            },
+                            parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -312,16 +344,21 @@ class BaseTest(unittest.TestCase):
             '1.1')
 
         config = result.config
+        meta = result.meta
         # Values should not be loaded. Let's check if they really are missing.
         # They should be!
         self.assertFalse('section1' in config.sections())
 
         # Also, no files should be added to the "loaded_files" list.
-        self.assertEqual(config.loaded_files, [])
+        self.assertEqual(meta.loaded_files, [])
 
     def test_mismatching_minor(self):
-        get_config('hello', 'world', search_path='testdata/versioned',
-                   version='2.0', parser=self.PARSER_CLASS)
+        get_config('hello', 'world',
+                   {
+                       'search_path': 'testdata/versioned',
+                       'version': '2.0',
+                   },
+                   parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -344,8 +381,10 @@ class BaseTest(unittest.TestCase):
         """
         self.skipTest('TODO')  # XXX
         get_config('hello', 'world',
-                   filename='mismatch.ini',
-                   search_path='testdata/versioned:testdata/versioned2',
+                   {
+                    'filename': 'mismatch.ini',
+                    'search_path': 'testdata/versioned:testdata/versioned2',
+                   },
                    parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
@@ -421,8 +460,12 @@ class BaseTest(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        get_config('hello', 'world', search_path='testdata/versioned',
-                   version='2.0', parser=self.PARSER_CLASS)
+        get_config('hello', 'world',
+                   {
+                       'search_path': 'testdata/versioned',
+                       'version': '2.0'
+                   },
+                   parser=self.PARSER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -432,8 +475,12 @@ class BaseTest(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        get_config('hello', 'world', search_path='testdata/versioned',
-                   version='5.0', parser=self.PARSER_CLASS)
+        get_config('hello', 'world',
+                   {
+                       'search_path': 'testdata/versioned',
+                       'version': '5.0',
+                   },
+                   parser=self.PARSER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
