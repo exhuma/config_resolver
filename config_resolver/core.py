@@ -32,7 +32,7 @@ def from_string(data, parser=None):
     '''
     Load a config from a string variable.
     '''
-    parser = parser or ini.Parser
+    parser = parser or ini
     # TODO: This still does not do any version checking!
     new_config = parser.from_string(data)
     return LookupResult(new_config, LookupMetadata(
@@ -48,24 +48,26 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
 
     All arguments are currently passed on to either :py:class:`~.Config`.
     '''
-    parser = parser or ini.Parser
+    parser = parser or ini
     config_id = ConfigID(group_name, app_name)
     log = prefixed_logger(config_id)
 
-    lookup_options = lookup_options or {
+    default_options = {
         'search_path': [],
         'filename': 'app.ini',
         'require_load': False,
         'version': None,
         'secure': False,
     }
+    if lookup_options:
+        default_options.update(lookup_options)
 
-    secure = lookup_options.get('secure', False)
-    require_load = lookup_options.get('require_load', False)
-    search_path = lookup_options.get('search_path', [])
-    filename = lookup_options.get('filename', 'app.ini')
+    secure = default_options['secure']
+    require_load = default_options['require_load']
+    search_path = default_options['search_path']
+    filename = default_options['filename']
     filename = effective_filename(config_id, filename)
-    requested_version = lookup_options.get('version', None)
+    requested_version = default_options['version']
     if requested_version:
         version = StrictVersion(requested_version)
     else:
@@ -76,10 +78,10 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
     # Store the complete list of all inspected items
     active_path = [join(_, filename) for _ in effective_path(config_id)]
 
-    output = parser()
+    output = ini.empty()
     found_files = find_files(
         config_id,
-        lookup_options.get('search_path'),
+        default_options['search_path'],
         filename,
         version=version,
         secure=secure)
@@ -88,7 +90,7 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
         if readability.is_readable:
             action = 'Updating' if loaded_files else 'Loading initial'
             log.info('%s config from %s', action, filename)
-            output.update_from_file(filename)
+            parser.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
             log.warning('Skipping unreadable file %s (%s)', filename, readability.reason)
@@ -97,10 +99,10 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
         log.warning(
             "No config file named %s found! Search path was %r",
             filename,
-            lookup_options['search_path'])
+            default_options['search_path'])
     elif not loaded_files and require_load:
         raise IOError("No config file named %s found! Search path "
-                      "was %r" % (filename, lookup_options['search_path']))
+                      "was %r" % (filename, default_options['search_path']))
 
     return LookupResult(output, LookupMetadata(
         active_path,
@@ -258,7 +260,7 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
     the file can be read, False otherwise.
     """
     log = prefixed_logger(config_id)
-    parser = parser or ini.Parser
+    parser = parser or ini
 
     if not exists(filename):
         return FileReadability(False, filename, 'File not found')
@@ -270,13 +272,14 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
 
     # Check if the file is version-compatible with this instance.
     config_instance = parser.from_filename(filename)
+    instance_version = parser.get_version(config_instance)
 
-    if version and not config_instance.version:
+    if version and not instance_version:
         # version is set, so we MUST have a version in the file!
         raise NoVersionError(
             "The config option 'meta.version' is missing in {}. The "
             "application expects version {}!".format(filename, version))
-    elif not version and config_instance.version:
+    elif not version and parser.get_version(config_instance):
         # Automatically "lock-in" a version number if one is found.
         # This prevents loading a chain of config files with incompatible
         # version numbers!
@@ -289,7 +292,7 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
     elif version:
         # The user expected a certain version. We need to check the version in
         # the file and compare.
-        major, minor, _ = config_instance.version.version
+        major, minor, _ = instance_version.version
         expected_major, expected_minor, _ = version.version
         if expected_major != major:
             msg = 'Invalid major version number in %r. Expected %r, got %r!'
@@ -297,7 +300,7 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
                 msg,
                 abspath(filename),
                 str(version),
-                config_instance.version)
+                instance_version)
             insecure_readable = False
             unreadable_reason = msg
         elif expected_minor != minor:
@@ -306,7 +309,7 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
                 msg,
                 abspath(filename),
                 str(version),
-                config_instance.version)
+                instance_version)
             insecure_readable = True
             unreadable_reason = msg
 

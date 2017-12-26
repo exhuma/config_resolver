@@ -19,7 +19,7 @@ from config_resolver import (
     from_string,
     get_config,
 )
-from config_resolver.parser.ini import Parser as IniParser
+from config_resolver.parser import ini
 
 
 @contextmanager
@@ -487,7 +487,7 @@ class BaseTest(unittest.TestCase):
 
 
 class IniTest(BaseTest):
-    PARSER_CLASS = IniParser
+    PARSER_CLASS = ini
 
 
 if __name__ == '__main__':
