@@ -15,7 +15,7 @@ from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 from distutils.version import StrictVersion
-from config_resolver.parser import ini
+from config_resolver.handler import ini
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
@@ -28,13 +28,13 @@ LookupMetadata = namedtuple('LookupMetadata', [
 FileReadability = namedtuple('FileReadability', 'is_readable filename reason version')
 
 
-def from_string(data, parser=None):
+def from_string(data, handler=None):
     '''
     Load a config from a string variable.
     '''
-    parser = parser or ini
+    handler = handler or ini
     # TODO: This still does not do any version checking!
-    new_config = parser.from_string(data)
+    new_config = handler.from_string(data)
     return LookupResult(new_config, LookupMetadata(
         '<unknown>',
         '<unknown>',
@@ -42,13 +42,13 @@ def from_string(data, parser=None):
     ))
 
 
-def get_config(group_name, app_name, lookup_options=None, parser=None):
+def get_config(group_name, app_name, lookup_options=None, handler=None):
     '''
     Factory function to retrieve new config instances.
 
     All arguments are currently passed on to either :py:class:`~.Config`.
     '''
-    parser = parser or ini
+    handler = handler or ini
     config_id = ConfigID(group_name, app_name)
     log = prefixed_logger(config_id)
 
@@ -87,7 +87,7 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
     current_version = version
     for filename in found_files:
         readability = is_readable(config_id, filename, current_version, secure,
-                                  parser)
+                                  handler)
         if not current_version and readability.version:
             # Automatically "lock-in" a version number if one is found.
             # This prevents loading a chain of config files with incompatible
@@ -101,7 +101,7 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
         if readability.is_readable:
             action = 'Updating' if loaded_files else 'Loading initial'
             log.info('%s config from %s', action, filename)
-            parser.update_from_file(output, filename)
+            handler.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
             log.warning('Skipping unreadable file %s (%s)', filename, readability.reason)
@@ -262,13 +262,13 @@ def env_name(config_id):
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(config_id, filename, version=None, secure=False, parser=None):
+def is_readable(config_id, filename, version=None, secure=False, handler=None):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
     """
     log = prefixed_logger(config_id)
-    parser = parser or ini
+    handler = handler or ini
 
     if not exists(filename):
         return FileReadability(False, filename, 'File not found', None)
@@ -278,8 +278,8 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
     unreadable_reason = '<unknown>'
 
     # Check if the file is version-compatible with this instance.
-    config_instance = parser.from_filename(filename)
-    instance_version = parser.get_version(config_instance)
+    config_instance = handler.from_filename(filename)
+    instance_version = handler.get_version(config_instance)
 
     if version and not instance_version:
         # version is set, so we MUST have a version in the file!
