@@ -25,6 +25,7 @@ LookupMetadata = namedtuple('LookupMetadata', [
     'loaded_files',
     'config_id'
 ])
+FileReadability = namedtuple('FileReadability', 'is_readable filename reason')
 
 
 def from_string(data):
@@ -166,9 +167,9 @@ def find_files(config_id, search_path=None, filename=None, version=None, secure=
     # which files we loaded in order to inform the user.
     for dirname in path:
         conf_name = join(dirname, config_filename)
-        readable = is_readable(config_id, conf_name, version=version,
-                               secure=secure)
-        yield conf_name, readable
+        readability = is_readable(config_id, conf_name, version=version,
+                                  secure=secure)
+        yield conf_name, readability.is_readable
 
 
 def effective_filename(config_id, custom_filename):
@@ -209,11 +210,12 @@ def is_readable(config_id, filename, version=None, secure=False):
 
     if not exists(filename):
         log.debug('Skipping %s (File not found).', filename)
-        return False
+        return FileReadability(False, filename, 'File not found')
     log.debug('Checking if %s is readable.', filename)
 
     insecure_readable = True
     file_version = None
+    unreadable_reason = '<unknown>'
 
     # Check if the file is version-compatible with this instance.
     new_config = ConfigParser()
@@ -241,28 +243,31 @@ def is_readable(config_id, filename, version=None, secure=False):
         major, minor, _ = StrictVersion(file_version).version
         expected_major, expected_minor, _ = version.version
         if expected_major != major:
+            msg = 'Invalid major version number in %r. Expected %r, got %r!'
             log.error(
-                'Invalid major version number in %r. Expected %r, got %r!',
+                msg,
                 abspath(filename),
                 str(version),
                 file_version)
             insecure_readable = False
+            unreadable_reason = msg
         elif expected_minor != minor:
+            msg = 'Mismatching minor version number in %r. Expected %r, got %r!'
             log.warning(
-                'Mismatching minor version number in %r. '
-                'Expected %r, got %r!',
+                msg,
                 abspath(filename),
                 str(version),
                 file_version)
             insecure_readable = True
+            unreadable_reason = msg
 
     if insecure_readable and secure:
         mode = get_stat(filename).st_mode
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
-            return False
-    return insecure_readable
+            return FileReadability(False, filename, msg)
+    return FileReadability(insecure_readable, filename, unreadable_reason)
 
 
 class Config(ConfigParser):  # pylint: disable = too-many-ancestors
