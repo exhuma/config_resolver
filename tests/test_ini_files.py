@@ -10,7 +10,6 @@ import re
 import stat
 import sys
 import unittest
-from configparser import NoOptionError, NoSectionError
 from os.path import expanduser, join, abspath
 from textwrap import dedent
 
