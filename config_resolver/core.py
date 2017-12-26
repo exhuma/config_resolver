@@ -45,18 +45,12 @@ def get_config(*args, **kwargs):
     '''
     Factory function to retrieve new config instances.
 
-    All arguments are currently passed on to either :py:class:`~.Config` or
-    :py:class:`~.SecuredConfig`. Which one is chosen depends on the ``secure``
-    kwarg. If it is True then a ``SecuredConfig`` will be returned. Otherwise
-    (or if missing) it will return a normal ``Config`` instance.
+    All arguments are currently passed on to either :py:class:`~.Config`.
     '''
     is_secure = kwargs.pop('secure', False)
     config_id = ConfigID(args[0], args[1])
     combined_args = [config_id] + list(args[2:])
-    if is_secure:
-        output = SecuredConfig(*combined_args, **kwargs)
-    else:
-        output = Config(*combined_args, **kwargs)
+    output = Config(secure=is_secure, *combined_args, **kwargs)
     return LookupResult(output, LookupMetadata(
         output.active_path,
         output.loaded_files,
@@ -291,13 +285,12 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         and the file is skipped. If the minor version differs the file will be
         loaded, but issue a warning log. Version numbers are parsed using
         :py:class:`distutils.version.StrictVersion`
+    :param secure: Passed to :py:meth:`.Config.load`
     """
     # pylint: disable = too-many-instance-attributes
 
-    SECURE = False
-
     def __init__(self, config_id, search_path=None,
-                 filename=None, require_load=False, version=None,
+                 filename=None, require_load=False, version=None, secure=False,
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
@@ -312,9 +305,9 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         self.app_name = config_id.app
         self.filename = effective_filename(config_id, filename)
         self.loaded_files = []
-        self.load(search_path, require_load=require_load)
+        self.load(search_path, require_load=require_load, secure=secure)
 
-    def load(self, search_path, reload=False, require_load=False):
+    def load(self, search_path, reload=False, require_load=False, secure=False):
         """
         Searches for an appropriate config file. If found, loads the file into
         the current instance. This method can also be used to reload a
@@ -328,6 +321,8 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         :param require_load: If set to ``True`` this will raise a
                              :py:exc:`IOError` if no config file has been found
                              to load.
+        :param secure: If set to true, refuses to load files which are readable
+            by "group" or "other".
         """
         if reload:  # pragma: no cover
             self.config = None
@@ -342,7 +337,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
             self.config_id,
             search_path,
             self.filename,
-            self.SECURE)
+            secure)
 
         self.active_path = [join(_, self.filename)
                             for _ in effective_path(self.config_id)]
@@ -352,7 +347,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                 self.config_id,
                 file,
                 version=self.version,
-                secure=self.SECURE
+                secure=secure,
             )
             if readable:
                 action = 'Updating' if self.loaded_files else 'Loading initial'
@@ -377,12 +372,3 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         elif not self.loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (self.filename, search_path))
-
-
-class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
-    """
-    A subclass of :py:class:`.Config` which will refuse to load config files
-    which are read able by other users than the owner.
-    """
-
-    SECURE = True

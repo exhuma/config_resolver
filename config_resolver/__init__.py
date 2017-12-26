@@ -3,7 +3,6 @@ from os.path import dirname, join
 from .core import (
     Config,
     NoVersionError,
-    SecuredConfig,
     from_string,
     get_config,
 )
