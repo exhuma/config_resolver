@@ -25,7 +25,7 @@ LookupMetadata = namedtuple('LookupMetadata', [
     'loaded_files',
     'config_id'
 ])
-FileReadability = namedtuple('FileReadability', 'is_readable filename reason')
+FileReadability = namedtuple('FileReadability', 'is_readable filename reason version')
 
 
 def from_string(data, parser=None):
@@ -82,11 +82,22 @@ def get_config(group_name, app_name, lookup_options=None, parser=None):
     found_files = find_files(
         config_id,
         default_options['search_path'],
-        filename,
-        version=version,
-        secure=secure)
+        filename)
 
-    for filename, readability in found_files:
+    current_version = version
+    for filename in found_files:
+        readability = is_readable(config_id, filename, current_version, secure,
+                                  parser)
+        if not current_version and readability.version:
+            # Automatically "lock-in" a version number if one is found.
+            # This prevents loading a chain of config files with incompatible
+            # version numbers!
+            log.info('%r contains a version number, but the config '
+                     'instance was not created with a version '
+                     'restriction. Will set version number to "%s" to '
+                     'prevent accidents!',
+                     filename, readability.version)
+            current_version = readability.version
         if readability.is_readable:
             action = 'Updating' if loaded_files else 'Loading initial'
             log.info('%s config from %s', action, filename)
@@ -200,7 +211,7 @@ def effective_path(config_id, search_path=''):
     return path
 
 
-def find_files(config_id, search_path=None, filename=None, version=None, secure=False):
+def find_files(config_id, search_path=None, filename=None):
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -209,7 +220,6 @@ def find_files(config_id, search_path=None, filename=None, version=None, secure=
         on posix, ``;`` on windows) to specify multiple folders. These
         folders will be searched in the specified order.
     :param filename: The name of the file we search for.
-    :param version: The config-file version requested by the app.
     """
     log = prefixed_logger(config_id)
 
@@ -220,9 +230,7 @@ def find_files(config_id, search_path=None, filename=None, version=None, secure=
     # which files we loaded in order to inform the user.
     for dirname in path:
         conf_name = join(dirname, config_filename)
-        readability = is_readable(config_id, conf_name, version=version,
-                                  secure=secure)
-        yield conf_name, readability
+        yield conf_name
 
 
 def effective_filename(config_id, custom_filename):
@@ -263,11 +271,10 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
     parser = parser or ini
 
     if not exists(filename):
-        return FileReadability(False, filename, 'File not found')
+        return FileReadability(False, filename, 'File not found', None)
     log.debug('Checking if %s is readable.', filename)
 
     insecure_readable = True
-    file_version = None
     unreadable_reason = '<unknown>'
 
     # Check if the file is version-compatible with this instance.
@@ -279,16 +286,6 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
         raise NoVersionError(
             "The config option 'meta.version' is missing in {}. The "
             "application expects version {}!".format(filename, version))
-    elif not version and parser.get_version(config_instance):
-        # Automatically "lock-in" a version number if one is found.
-        # This prevents loading a chain of config files with incompatible
-        # version numbers!
-        # TODO: This is no longer "locked in" as it's no longer a class member!
-        log.info('%r contains a version number, but the config '
-                 'instance was not created with a version '
-                 'restriction. Will set version number to "%s" to '
-                 'prevent accidents!',
-                 filename, config_instance.version)
     elif version:
         # The user expected a certain version. We need to check the version in
         # the file and compare.
@@ -318,5 +315,5 @@ def is_readable(config_id, filename, version=None, secure=False, parser=None):
         if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
-            return FileReadability(False, filename, msg)
-    return FileReadability(insecure_readable, filename, unreadable_reason)
+            return FileReadability(False, filename, msg, instance_version)
+    return FileReadability(insecure_readable, filename, unreadable_reason, instance_version)

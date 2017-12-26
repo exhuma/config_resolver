@@ -378,7 +378,6 @@ class BaseTest(unittest.TestCase):
         files even if the application did not explicitly request a version
         number!
         """
-        self.skipTest('TODO')  # XXX
         get_config('hello', 'world',
                    {
                     'filename': 'mismatch.ini',
