@@ -10,12 +10,12 @@ from .util import (
     PrefixFilter,
 )
 from collections import namedtuple
-from configparser import ConfigParser
 from os import getenv, pathsep, getcwd, stat as get_stat
 from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 from distutils.version import StrictVersion
+from config_resolver.parser import ini
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
@@ -28,13 +28,13 @@ LookupMetadata = namedtuple('LookupMetadata', [
 FileReadability = namedtuple('FileReadability', 'is_readable filename reason')
 
 
-def from_string(data):
+def from_string(data, parser=None):
     '''
     Load a config from a string variable.
     '''
+    parser = parser or ini.Parser
     # TODO: This still does not do any version checking!
-    new_config = ConfigParser()
-    new_config.read_string(data)
+    new_config = parser.from_string(data)
     return LookupResult(new_config, LookupMetadata(
         '<unknown>',
         '<unknown>',
@@ -42,16 +42,17 @@ def from_string(data):
     ))
 
 
-def get_config(*args, **kwargs):
+def get_config(group_name, app_name, parser=None, *args, **kwargs):
     '''
     Factory function to retrieve new config instances.
 
     All arguments are currently passed on to either :py:class:`~.Config`.
     '''
+    parser = parser or ini.Parser
     is_secure = kwargs.pop('secure', False)
-    config_id = ConfigID(args[0], args[1])
-    combined_args = [config_id] + list(args[2:])
-    output = Config(secure=is_secure, *combined_args, **kwargs)
+    config_id = ConfigID(group_name, app_name)
+    combined_args = [config_id] + list(args)
+    output = Config(secure=is_secure, parser=parser, *combined_args, **kwargs)
     return LookupResult(output, LookupMetadata(
         output.active_path,
         output.loaded_files,
@@ -201,12 +202,13 @@ def env_name(config_id):
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(config_id, filename, version=None, secure=False):
+def is_readable(config_id, filename, version=None, secure=False, parser=None):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
     """
     log = prefixed_logger(config_id)
+    parser = parser or ini.Parser
 
     if not exists(filename):
         log.debug('Skipping %s (File not found).', filename)
@@ -218,29 +220,27 @@ def is_readable(config_id, filename, version=None, secure=False):
     unreadable_reason = '<unknown>'
 
     # Check if the file is version-compatible with this instance.
-    new_config = ConfigParser()
-    new_config.read(filename)
-    if version and not new_config.has_option('meta', 'version'):
+    config_instance = parser.from_filename(filename)
+
+    if version and not config_instance.version:
         # version is set, so we MUST have a version in the file!
         raise NoVersionError(
             "The config option 'meta.version' is missing in {}. The "
             "application expects version {}!".format(filename, version))
-    elif not version and new_config.has_option('meta', 'version'):
+    elif not version and config_instance.version:
         # Automatically "lock-in" a version number if one is found.
         # This prevents loading a chain of config files with incompatible
         # version numbers!
         # TODO: This is no longer "locked in" as it's no longer a class member!
-        version = StrictVersion(new_config.get('meta', 'version'))
         log.info('%r contains a version number, but the config '
                  'instance was not created with a version '
                  'restriction. Will set version number to "%s" to '
                  'prevent accidents!',
-                 filename, version)
+                 filename, config_instance.version)
     elif version:
-        # This instance expected a certain version. We need to check the
-        # version in the file and compare.
-        file_version = new_config.get('meta', 'version')
-        major, minor, _ = StrictVersion(file_version).version
+        # The user expected a certain version. We need to check the version in
+        # the file and compare.
+        major, minor, _ = config_instance.version.version
         expected_major, expected_minor, _ = version.version
         if expected_major != major:
             msg = 'Invalid major version number in %r. Expected %r, got %r!'
@@ -248,7 +248,7 @@ def is_readable(config_id, filename, version=None, secure=False):
                 msg,
                 abspath(filename),
                 str(version),
-                file_version)
+                config_instance.version)
             insecure_readable = False
             unreadable_reason = msg
         elif expected_minor != minor:
@@ -257,7 +257,7 @@ def is_readable(config_id, filename, version=None, secure=False):
                 msg,
                 abspath(filename),
                 str(version),
-                file_version)
+                config_instance.version)
             insecure_readable = True
             unreadable_reason = msg
 
@@ -270,7 +270,7 @@ def is_readable(config_id, filename, version=None, secure=False):
     return FileReadability(insecure_readable, filename, unreadable_reason)
 
 
-class Config(ConfigParser):  # pylint: disable = too-many-ancestors
+class Config:
     """
     Initialises a config object with files found on the search path.
 
@@ -295,7 +295,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
     """
     # pylint: disable = too-many-instance-attributes
 
-    def __init__(self, config_id, search_path=None,
+    def __init__(self, config_id, search_path=None, parser=None,
                  filename=None, require_load=False, version=None, secure=False,
                  **kwargs):
         # pylint: disable = too-many-arguments
@@ -311,7 +311,17 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
         self.app_name = config_id.app
         self.filename = effective_filename(config_id, filename)
         self.loaded_files = []
+        self.__parser = parser()
         self.load(search_path, require_load=require_load, secure=secure)
+
+    def has_section(self, section_name):
+        return self.__parser.has_section(section_name)
+
+    def get(self, section, option, fallback=None):
+        return self.__parser.get(section, option, fallback)
+
+    def sections(self):
+        return self.__parser.sections()
 
     def load(self, search_path, reload=False, require_load=False, secure=False):
         """
@@ -353,7 +363,7 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
             if readable:
                 action = 'Updating' if self.loaded_files else 'Loading initial'
                 self._log.info('%s config from %s', action, file)
-                self.read(file)
+                self.__parser.update_from_file(file)
                 self.loaded_files.append(file)
 
         if not self.loaded_files and not require_load:

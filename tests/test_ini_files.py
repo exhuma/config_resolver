@@ -13,13 +13,13 @@ import unittest
 from configparser import NoOptionError, NoSectionError
 from os.path import expanduser, join, abspath
 from textwrap import dedent
-from unittest.mock import patch
 
 from config_resolver import (
     NoVersionError,
     from_string,
     get_config,
 )
+from config_resolver.parser.ini import Parser as IniParser
 
 
 @contextmanager
@@ -99,6 +99,8 @@ class TestableHandler(logging.Handler):
 
 class BaseTest(unittest.TestCase):
 
+    PARSER_CLASS = IniParser
+
     def setUp(self):
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
@@ -114,30 +116,37 @@ class BaseTest(unittest.TestCase):
             [section_mem]
             val = 1
             '''
-        ))
+        ), parser=self.PARSER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section_mem'))
         self.assertEqual(config.get('section_mem', 'val'), '1')
 
     def test_simple_init(self):
-        result = get_config('hello', 'world', search_path='testdata')
+        '''
+        If we find a file named ``app.ini`` in ``search_path``, we load that.
+        '''
+        result = get_config('hello', 'world', search_path='testdata',
+                            parser=self.PARSER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section1'))
 
     def test_get(self):
-        result = get_config('hello', 'world', search_path='testdata')
+        result = get_config('hello', 'world', search_path='testdata',
+                            parser=self.PARSER_CLASS)
         config = result.config
         self.assertEqual(config.get('section1', 'var1'), 'foo')
         self.assertEqual(config.get('section1', 'var2'), 'bar')
         self.assertEqual(config.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        result = get_config('hello', 'world', search_path='testdata')
+        result = get_config('hello', 'world', search_path='testdata',
+                            parser=self.PARSER_CLASS)
         config = result.config
         self.assertIs(config.get('section1', 'b', fallback=None), None)
 
     def test_no_section_error(self):
-        result = get_config('hello', 'world', search_path='testdata')
+        result = get_config('hello', 'world', search_path='testdata',
+                            parser=self.PARSER_CLASS)
         config = result.config
         self.assertIs(config.get('a', 'b', fallback=None), None)
 
@@ -145,7 +154,7 @@ class BaseTest(unittest.TestCase):
         with environment(HELLO_WORLD_FILENAME='test.ini',
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('hello', 'world')
+            result = get_config('hello', 'world', parser=self.PARSER_CLASS)
         expected = ['/etc/hello/world/test.ini',
                     '/etc/xdg/hello/world/test.ini',
                     expanduser('~/.config/hello/world/test.ini'),
@@ -156,7 +165,7 @@ class BaseTest(unittest.TestCase):
 
     def test_env_name_override(self):
         with environment(HELLO_WORLD_FILENAME='test.ini'):
-            get_config('hello', 'world')
+            get_config('hello', 'world', parser=self.PARSER_CLASS)
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
         self.catcher.assert_contains(
@@ -166,7 +175,7 @@ class BaseTest(unittest.TestCase):
 
     def test_env_path(self):
         with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
-            result = get_config('hello', 'world')
+            result = get_config('hello', 'world', parser=self.PARSER_CLASS)
         expected = ['testdata/app.ini',
                     'testdata/a/app.ini',
                     'testdata/b/app.ini']
@@ -176,7 +185,7 @@ class BaseTest(unittest.TestCase):
 
     def test_env_path_override_log(self):
         with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
-            get_config('hello', 'world')
+            get_config('hello', 'world', parser=self.PARSER_CLASS)
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
         self.catcher.assert_contains(
@@ -188,7 +197,7 @@ class BaseTest(unittest.TestCase):
         with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b',
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('hello', 'world')
+            result = get_config('hello', 'world', parser=self.PARSER_CLASS)
         expected = ['/etc/hello/world/app.ini',
                     '/etc/xdg/hello/world/app.ini',
                     expanduser('~/.config/hello/world/app.ini'),
@@ -201,7 +210,7 @@ class BaseTest(unittest.TestCase):
 
     def test_env_path_add_log(self):
         with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b'):
-            get_config('hello', 'world')
+            get_config('hello', 'world', parser=self.PARSER_CLASS)
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
         self.catcher.assert_contains(
@@ -211,7 +220,8 @@ class BaseTest(unittest.TestCase):
 
     def test_search_path(self):
         result = get_config('hello', 'world',
-                            search_path='testdata:testdata/a:testdata/b')
+                            search_path='testdata:testdata/a:testdata/b',
+                            parser=self.PARSER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section3'))
         self.assertEqual(config.get('section1', 'var1'), 'frob')
@@ -221,23 +231,14 @@ class BaseTest(unittest.TestCase):
 
     def test_filename(self):
         result = get_config('hello', 'world', filename='test.ini',
-                            search_path='testdata')
+                            search_path='testdata',
+                            parser=self.PARSER_CLASS)
         self.assertEqual(result.config.get('section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
-        result = get_config('hello', 'world')
+        result = get_config('hello', 'world', self.PARSER_CLASS)
         self.assertEqual(result.meta.config_id.group, 'hello')
         self.assertEqual(result.meta.config_id.app, 'world')
-
-    def test_mandatory_section(self):
-        result = get_config('hello', 'world', search_path='testdata')
-        with self.assertRaises(NoSectionError):
-            result.config.get('nosuchsection', 'nosuchoption')
-
-    def test_mandatory_option(self):
-        result = get_config('hello', 'world', search_path='testdata')
-        with self.assertRaises(NoOptionError):
-            result.config.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
         logger = logging.getLogger('config_resolver')
@@ -245,7 +246,8 @@ class BaseTest(unittest.TestCase):
         catcher = TestableHandler()
         logger.addHandler(catcher)
         get_config('hello', 'world', filename='test.ini',
-                   search_path='testdata', secure=True)
+                   search_path='testdata', secure=True,
+                   parser=self.PARSER_CLASS)
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
@@ -256,7 +258,8 @@ class BaseTest(unittest.TestCase):
 
     def test_unsecured_file(self):
         result = get_config('hello', 'world', filename='test.ini',
-                            search_path='testdata', secure=True)
+                            search_path='testdata', secure=True,
+                            parser=self.PARSER_CLASS)
         self.assertNotIn(join('testdata', 'test.ini'), result.meta.loaded_files)
 
     def test_secured_file(self):
@@ -270,27 +273,31 @@ class BaseTest(unittest.TestCase):
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
         result = get_config('hello', 'world', filename='secure.ini',
-                            search_path='testdata', secure=True)
+                            search_path='testdata', secure=True,
+                            parser=self.PARSER_CLASS)
         self.assertIn(path, result.meta.loaded_files)
 
     def test_secured_nonexisting_file(self):
         result = get_config('hello', 'world', filename='nonexisting.ini',
-                            search_path='testdata', secure=True)
+                            search_path='testdata', secure=True,
+                            parser=self.PARSER_CLASS)
         self.assertNotIn(join('testdata', 'nonexisting.ini'),
                          result.meta.loaded_files)
 
     def test_file_not_found_exception(self):
         with self.assertRaises(IOError):
             get_config('hello', 'world', filename='nonexisting.ini',
-                       search_path='testdata', require_load=True)
+                       search_path='testdata', require_load=True,
+                       parser=self.PARSER_CLASS)
 
     def test_no_version_found_warning(self):
         with self.assertRaises(NoVersionError):
-            get_config('hello', 'world', search_path='testdata', version='1.1')
+            get_config('hello', 'world', search_path='testdata', version='1.1',
+                       parser=self.PARSER_CLASS)
 
     def test_mismatching_major(self):
         result = get_config('hello', 'world', search_path='testdata/versioned',
-                            version='1.1')
+                            version='1.1', parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -314,7 +321,7 @@ class BaseTest(unittest.TestCase):
 
     def test_mismatching_minor(self):
         get_config('hello', 'world', search_path='testdata/versioned',
-                   version='2.0')
+                   version='2.0', parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -338,7 +345,8 @@ class BaseTest(unittest.TestCase):
         self.skipTest('TODO')  # XXX
         get_config('hello', 'world',
                    filename='mismatch.ini',
-                   search_path='testdata/versioned:testdata/versioned2')
+                   search_path='testdata/versioned:testdata/versioned2',
+                   parser=self.PARSER_CLASS)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
@@ -355,7 +363,7 @@ class BaseTest(unittest.TestCase):
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME=''):
-            result = get_config('foo', 'bar')
+            result = get_config('foo', 'bar', parser=self.PARSER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
@@ -367,7 +375,7 @@ class BaseTest(unittest.TestCase):
     def test_xdg_empty_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='',
                          XDG_CONFIG_HOME=''):
-            result = get_config('foo', 'bar')
+            result = get_config('foo', 'bar', parser=self.PARSER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -378,7 +386,7 @@ class BaseTest(unittest.TestCase):
     def test_xdg_config_home(self):
         with environment(XDG_CONFIG_HOME='/path/to/config/home',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('foo', 'bar')
+            result = get_config('foo', 'bar', parser=self.PARSER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -389,7 +397,7 @@ class BaseTest(unittest.TestCase):
     def test_xdg_empty_config_home(self):
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('foo', 'bar')
+            result = get_config('foo', 'bar', parser=self.PARSER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/etc/xdg/foo/bar/app.ini',
@@ -400,7 +408,7 @@ class BaseTest(unittest.TestCase):
     def test_both_xdg_variables(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME='/xdg/config/home'):
-            result = get_config('foo', 'bar')
+            result = get_config('foo', 'bar', parser=self.PARSER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/app.ini',
                 '/xdgpath2/foo/bar/app.ini',
@@ -414,7 +422,7 @@ class BaseTest(unittest.TestCase):
         When getting a version number mismatch, the filename should be logged!
         """
         get_config('hello', 'world', search_path='testdata/versioned',
-                   version='2.0')
+                   version='2.0', parser=self.PARSER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -425,7 +433,7 @@ class BaseTest(unittest.TestCase):
         When getting a version number mismatch, the filename should be logged!
         """
         get_config('hello', 'world', search_path='testdata/versioned',
-                   version='5.0')
+                   version='5.0', parser=self.PARSER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
