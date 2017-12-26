@@ -98,8 +98,7 @@ class TestableHandler(logging.Handler):
 
 
 class BaseTest(unittest.TestCase):
-
-    PARSER_CLASS = IniParser
+    PARSER_CLASS = None
 
     def setUp(self):
         logger = logging.getLogger()
@@ -485,6 +484,10 @@ class BaseTest(unittest.TestCase):
             'config_resolver.hello.world',
             logging.ERROR,
             'testdata/versioned/app.ini')
+
+
+class IniTest(BaseTest):
+    PARSER_CLASS = IniParser
 
 
 if __name__ == '__main__':
