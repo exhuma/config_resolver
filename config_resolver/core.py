@@ -146,7 +146,7 @@ def effective_path(config_id, search_path=''):
     return path
 
 
-def find_files(config_id, search_path=None, filename=None, secure=False):
+def find_files(config_id, search_path=None, filename=None, version=None, secure=False):
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -155,6 +155,7 @@ def find_files(config_id, search_path=None, filename=None, secure=False):
         on posix, ``;`` on windows) to specify multiple folders. These
         folders will be searched in the specified order.
     :param filename: The name of the file we search for.
+    :param version: The config-file version requested by the app.
     """
     log = prefixed_logger(config_id)
 
@@ -165,9 +166,9 @@ def find_files(config_id, search_path=None, filename=None, secure=False):
     # which files we loaded in order to inform the user.
     for dirname in path:
         conf_name = join(dirname, config_filename)
-        if is_readable(config_id, conf_name, secure=secure):
-            log.info('Found file at %s', conf_name)
-            yield conf_name
+        readable = is_readable(config_id, conf_name, version=version,
+                               secure=secure)
+        yield conf_name, readable
 
 
 def effective_filename(config_id, custom_filename):
@@ -333,22 +334,17 @@ class Config(ConfigParser):  # pylint: disable = too-many-ancestors
                             '``reload=True`` to avoid caching!')
             return
 
-        files = find_files(
+        found_files = find_files(
             self.config_id,
             search_path,
             self.filename,
-            secure)
+            version=self.version,
+            secure=secure)
 
         self.active_path = [join(_, self.filename)
                             for _ in effective_path(self.config_id)]
 
-        for file in files:
-            readable = is_readable(
-                self.config_id,
-                file,
-                version=self.version,
-                secure=secure,
-            )
+        for file, readable in found_files:
             if readable:
                 action = 'Updating' if self.loaded_files else 'Loading initial'
                 self._log.info('%s config from %s', action, file)
