@@ -178,9 +178,9 @@ class CommonTests:
         path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
         with environment(HELLO_WORLD_PATH=path):
             result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        expected = ['%s/app.ini' % self.DATA_PATH,
-                    '%s/a/app.ini' % self.DATA_PATH,
-                    '%s/b/app.ini' % self.DATA_PATH]
+        expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                    '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                    '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)]
         self.assertEqual(
             result.meta.active_path,
             expected)
@@ -203,13 +203,13 @@ class CommonTests:
                          XDG_CONFIG_DIRS=''):
             result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
         expected = [
-            '/etc/hello/world/app.ini',
-            '/etc/xdg/hello/world/app.ini',
-            expanduser('~/.config/hello/world/app.ini'),
-            '{}/.hello/world/app.ini'.format(os.getcwd()),
-            '%s/app.ini' % self.DATA_PATH,
-            '%s/a/app.ini' % self.DATA_PATH,
-            '%s/b/app.ini' % self.DATA_PATH
+            '/etc/hello/world/%s' % self.APP_FILENAME,
+            '/etc/xdg/hello/world/%s' % self.APP_FILENAME,
+            expanduser('~/.config/hello/world/%s' % self.APP_FILENAME),
+            '%s/.hello/world/%s' % (os.getcwd(), self.APP_FILENAME),
+            '%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
+            '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
+            '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)
         ]
         self.assertEqual(
             result.meta.active_path,
@@ -236,9 +236,9 @@ class CommonTests:
         self.assertEqual(
             result.meta.loaded_files,
             [
-                '%s/app.ini' % self.DATA_PATH,
-                '%s/a/app.ini' % self.DATA_PATH,
-                '%s/b/app.ini' % self.DATA_PATH
+                '%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME),
             ])
 
     def test_filename(self):
