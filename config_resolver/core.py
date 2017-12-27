@@ -233,20 +233,13 @@ def find_files(config_id, search_path=None, filename=None):
         yield conf_name
 
 
-def effective_filename(config_id, custom_filename):
+def effective_filename(config_id, config_filename):
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
     """
     log = prefixed_logger(config_id)
 
-    # same logic for the configuration filename. First, check if we were
-    # initialized with a filename...
-    config_filename = 'app.ini'
-    if custom_filename:
-        config_filename = custom_filename
-
-    # ... next, take the value from the environment
     env_filename = getenv(env_name(config_id))
     if env_filename:
         log.info('Configuration filename was overridden with %r '
