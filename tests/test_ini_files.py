@@ -96,7 +96,7 @@ class TestableHandler(logging.Handler):
         del self.records[:]
 
 
-class BaseTest(unittest.TestCase):
+class CommonTests:
     HANDLER_CLASS = None
     TEST_FILENAME = 'test.ini'
     APP_FILENAME = 'app.ini'
@@ -498,8 +498,11 @@ class BaseTest(unittest.TestCase):
             '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
 
 
-class IniTest(BaseTest):
+class IniTest(CommonTests, unittest.TestCase):
     HANDLER_CLASS = ini
+    TEST_FILENAME = 'test.ini'
+    APP_FILENAME = 'app.ini'
+    DATA_PATH = 'testdata/ini'
 
 
 if __name__ == '__main__':
