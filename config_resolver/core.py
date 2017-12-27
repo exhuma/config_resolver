@@ -54,7 +54,7 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
 
     default_options = {
         'search_path': [],
-        'filename': 'app.ini',
+        'filename': handler.DEFAULT_FILENAME,
         'require_load': False,
         'version': None,
         'secure': False,

@@ -18,7 +18,7 @@ from config_resolver import (
     from_string,
     get_config,
 )
-from config_resolver.handler import ini
+from config_resolver.handler import ini, json
 
 
 @contextmanager
@@ -100,7 +100,15 @@ class CommonTests:
     HANDLER_CLASS = None
     TEST_FILENAME = 'test.ini'
     APP_FILENAME = 'app.ini'
+    SECURE_FILENAME = 'secure.ini'
     DATA_PATH = 'testdata/ini'
+    MISMATCH_FILENAME = 'mismatch.json'
+    TEST_STRING = dedent(
+        '''\
+        [section_mem]
+        val = 1
+        '''
+    )
 
     def setUp(self):
         logger = logging.getLogger()
@@ -112,12 +120,7 @@ class CommonTests:
         self.catcher.reset()
 
     def test_from_string(self):
-        result = from_string(dedent(
-            '''\
-            [section_mem]
-            val = 1
-            '''
-        ), handler=self.HANDLER_CLASS)
+        result = from_string(self.TEST_STRING, handler=self.HANDLER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section_mem'))
         self.assertEqual(config.get('section_mem', 'val'), '1')
@@ -293,12 +296,12 @@ class CommonTests:
         if sys.platform not in ('linux', 'linux2'):
             self.skipTest('Only runnable on *nix')
 
-        path = join(self.DATA_PATH, 'secure.ini')
+        path = join(self.DATA_PATH, self.SECURE_FILENAME)
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
         result = get_config('hello', 'world',
                             {
-                                'filename': 'secure.ini',
+                                'filename': self.SECURE_FILENAME,
                                 'search_path': self.DATA_PATH,
                                 'secure': True,
                             },
@@ -393,7 +396,7 @@ class CommonTests:
         """
         get_config('hello', 'world',
                    {
-                    'filename': 'mismatch.ini',
+                    'filename': self.MISMATCH_FILENAME,
                     'search_path': '{0}/versioned:{0}/versioned2'.format(self.DATA_PATH),
                    },
                    handler=self.HANDLER_CLASS)
@@ -503,6 +506,34 @@ class IniTest(CommonTests, unittest.TestCase):
     TEST_FILENAME = 'test.ini'
     APP_FILENAME = 'app.ini'
     DATA_PATH = 'testdata/ini'
+    SECURE_FILENAME = 'secure.ini'
+    MISMATCH_FILENAME = 'mismatch.ini'
+    TEST_STRING = dedent(
+        '''\
+        [section_mem]
+        val = 1
+        '''
+    )
+
+class JsonTest(CommonTests, unittest.TestCase):
+    HANDLER_CLASS = json
+    TEST_FILENAME = 'test.json'
+    APP_FILENAME = 'app.json'
+    DATA_PATH = 'testdata/json'
+    SECURE_FILENAME = 'secure.json'
+    MISMATCH_FILENAME = 'mismatch.json'
+    TEST_STRING = dedent(
+        '''\
+        {
+            "section_mem": {
+                "val": 1
+            }
+        }
+        '''
+    )
+
+    def test_from_string(self):
+        self.skipTest('The test-code is currenty no compatible with JSON files')
 
 
 if __name__ == '__main__':
