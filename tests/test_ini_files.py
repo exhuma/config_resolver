@@ -98,6 +98,9 @@ class TestableHandler(logging.Handler):
 
 class BaseTest(unittest.TestCase):
     HANDLER_CLASS = None
+    TEST_FILENAME = 'test.ini'
+    APP_FILENAME = 'app.ini'
+    DATA_PATH = 'testdata/ini'
 
     def setUp(self):
         logger = logging.getLogger()
@@ -123,13 +126,13 @@ class BaseTest(unittest.TestCase):
         '''
         If we find a file named ``app.ini`` in ``search_path``, we load that.
         '''
-        result = get_config('hello', 'world', {'search_path': 'testdata'},
+        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section1'))
 
     def test_get(self):
-        result = get_config('hello', 'world', {'search_path': 'testdata'},
+        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertEqual(config.get('section1', 'var1'), 'foo')
@@ -137,80 +140,87 @@ class BaseTest(unittest.TestCase):
         self.assertEqual(config.get('section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        result = get_config('hello', 'world', {'search_path': 'testdata'},
+        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertIs(config.get('section1', 'b', fallback=None), None)
 
     def test_no_section_error(self):
-        result = get_config('hello', 'world', {'search_path': 'testdata'},
+        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertIs(config.get('a', 'b', fallback=None), None)
 
     def test_env_name(self):
-        with environment(HELLO_WORLD_FILENAME='test.ini',
+        with environment(HELLO_WORLD_FILENAME=self.TEST_FILENAME,
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
             result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        expected = ['/etc/hello/world/test.ini',
-                    '/etc/xdg/hello/world/test.ini',
-                    expanduser('~/.config/hello/world/test.ini'),
-                    '{}/.hello/world/test.ini'.format(os.getcwd())]
+        expected = ['/etc/hello/world/%s' % self.TEST_FILENAME,
+                    '/etc/xdg/hello/world/%s' % self.TEST_FILENAME,
+                    expanduser('~/.config/hello/world/%s' % self.TEST_FILENAME),
+                    '{}/.hello/world/{}'.format(os.getcwd(), self.TEST_FILENAME)]
         self.assertEqual(
             result.meta.active_path,
             expected)
 
     def test_env_name_override(self):
-        with environment(HELLO_WORLD_FILENAME='test.ini'):
+        with environment(HELLO_WORLD_FILENAME=self.TEST_FILENAME):
             get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        msg = ("filename was overridden with 'test.ini' by the environment "
-               "variable HELLO_WORLD_FILENAME")
+        msg = ("filename was overridden with '%s' by the environment "
+               "variable HELLO_WORLD_FILENAME" % self.TEST_FILENAME)
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
 
     def test_env_path(self):
-        with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
+        path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
+        with environment(HELLO_WORLD_PATH=path):
             result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        expected = ['testdata/app.ini',
-                    'testdata/a/app.ini',
-                    'testdata/b/app.ini']
+        expected = ['%s/app.ini' % self.DATA_PATH,
+                    '%s/a/app.ini' % self.DATA_PATH,
+                    '%s/b/app.ini' % self.DATA_PATH]
         self.assertEqual(
             result.meta.active_path,
             expected)
 
     def test_env_path_override_log(self):
-        with environment(HELLO_WORLD_PATH='testdata:testdata/a:testdata/b'):
+        path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
+        with environment(HELLO_WORLD_PATH=path):
             get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
-               "environment variable 'HELLO_WORLD_PATH'")
+        msg = ("overridden with '%s' by the "
+               "environment variable 'HELLO_WORLD_PATH'") % path
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
 
     def test_env_path_add(self):
-        with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b',
+        path = '+{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
+        with environment(HELLO_WORLD_PATH=path,
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
             result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        expected = ['/etc/hello/world/app.ini',
-                    '/etc/xdg/hello/world/app.ini',
-                    expanduser('~/.config/hello/world/app.ini'),
-                    '{}/.hello/world/app.ini'.format(os.getcwd()),
-                    'testdata/app.ini',
-                    'testdata/a/app.ini', 'testdata/b/app.ini']
+        expected = [
+            '/etc/hello/world/app.ini',
+            '/etc/xdg/hello/world/app.ini',
+            expanduser('~/.config/hello/world/app.ini'),
+            '{}/.hello/world/app.ini'.format(os.getcwd()),
+            '%s/app.ini' % self.DATA_PATH,
+            '%s/a/app.ini' % self.DATA_PATH,
+            '%s/b/app.ini' % self.DATA_PATH
+        ]
         self.assertEqual(
             result.meta.active_path,
             expected)
 
     def test_env_path_add_log(self):
-        with environment(HELLO_WORLD_PATH='+testdata:testdata/a:testdata/b'):
+        path = '+{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
+        with environment(HELLO_WORLD_PATH=path):
             get_config('hello', 'world', handler=self.HANDLER_CLASS)
-        msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
-               "environment variable HELLO_WORLD_PATH")
+        msg = ("extended with '%s' by the "
+               "environment variable HELLO_WORLD_PATH") % path
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
@@ -218,20 +228,24 @@ class BaseTest(unittest.TestCase):
 
     def test_search_path(self):
         result = get_config('hello', 'world',
-                            {'search_path': 'testdata:testdata/a:testdata/b'},
+                            {'search_path': '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section3'))
         self.assertEqual(config.get('section1', 'var1'), 'frob')
         self.assertEqual(
             result.meta.loaded_files,
-            ['testdata/app.ini', 'testdata/a/app.ini', 'testdata/b/app.ini'])
+            [
+                '%s/app.ini' % self.DATA_PATH,
+                '%s/a/app.ini' % self.DATA_PATH,
+                '%s/b/app.ini' % self.DATA_PATH
+            ])
 
     def test_filename(self):
         result = get_config('hello', 'world',
                             {
-                                'filename': 'test.ini',
-                                'search_path': 'testdata',
+                                'filename': self.TEST_FILENAME,
+                                'search_path': self.DATA_PATH,
                             },
                             handler=self.HANDLER_CLASS)
         self.assertEqual(result.config.get('section2', 'var1'), 'baz')
@@ -249,14 +263,14 @@ class BaseTest(unittest.TestCase):
         get_config(
             'hello', 'world',
             {
-                'filename': 'test.ini',
-                'search_path': 'testdata',
+                'filename': self.TEST_FILENAME,
+                'search_path': self.DATA_PATH,
                 'secure': True,
             },
             handler=self.HANDLER_CLASS)
         expected_message = (
-            "File 'testdata/test.ini' is not secure enough. "
-            "Change it's mode to 600")
+            "File '%s/%s' is not secure enough. "
+            "Change it's mode to 600" % (self.DATA_PATH, self.TEST_FILENAME))
         catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
@@ -265,12 +279,12 @@ class BaseTest(unittest.TestCase):
     def test_unsecured_file(self):
         result = get_config('hello', 'world',
                             {
-                                'filename': 'test.ini',
-                                'search_path': 'testdata',
+                                'filename': self.TEST_FILENAME,
+                                'search_path': self.DATA_PATH,
                                 'secure': True,
                             },
                             handler=self.HANDLER_CLASS)
-        self.assertNotIn(join('testdata', 'test.ini'), result.meta.loaded_files)
+        self.assertNotIn(join(self.DATA_PATH, self.TEST_FILENAME), result.meta.loaded_files)
 
     def test_secured_file(self):
         # make sure the file is secured. This information is lost through git so
@@ -279,13 +293,13 @@ class BaseTest(unittest.TestCase):
         if sys.platform not in ('linux', 'linux2'):
             self.skipTest('Only runnable on *nix')
 
-        path = join('testdata', 'secure.ini')
+        path = join(self.DATA_PATH, 'secure.ini')
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
         result = get_config('hello', 'world',
                             {
                                 'filename': 'secure.ini',
-                                'search_path': 'testdata',
+                                'search_path': self.DATA_PATH,
                                 'secure': True,
                             },
                             handler=self.HANDLER_CLASS)
@@ -295,11 +309,11 @@ class BaseTest(unittest.TestCase):
         result = get_config('hello', 'world',
                             {
                                 'filename': 'nonexisting.ini',
-                                'search_path': 'testdata',
+                                'search_path': self.DATA_PATH,
                                 'secure': True,
                             },
                             handler=self.HANDLER_CLASS)
-        self.assertNotIn(join('testdata', 'nonexisting.ini'),
+        self.assertNotIn(join(self.DATA_PATH, 'nonexisting.ini'),
                          result.meta.loaded_files)
 
     def test_file_not_found_exception(self):
@@ -307,7 +321,7 @@ class BaseTest(unittest.TestCase):
             get_config('hello', 'world',
                        {
                            'filename': 'nonexisting.ini',
-                           'search_path': 'testdata',
+                           'search_path': self.DATA_PATH,
                            'require_load': True,
                        },
                        handler=self.HANDLER_CLASS)
@@ -316,7 +330,7 @@ class BaseTest(unittest.TestCase):
         with self.assertRaises(NoVersionError):
             get_config('hello', 'world',
                        {
-                           'search_path': 'testdata',
+                           'search_path': self.DATA_PATH,
                            'version': '1.1',
                        },
                        handler=self.HANDLER_CLASS)
@@ -324,7 +338,7 @@ class BaseTest(unittest.TestCase):
     def test_mismatching_major(self):
         result = get_config('hello', 'world',
                             {
-                                'search_path': 'testdata/versioned',
+                                'search_path': '%s/versioned' % self.DATA_PATH,
                                 'version': '1.1',
                             },
                             handler=self.HANDLER_CLASS)
@@ -353,7 +367,7 @@ class BaseTest(unittest.TestCase):
     def test_mismatching_minor(self):
         get_config('hello', 'world',
                    {
-                       'search_path': 'testdata/versioned',
+                       'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '2.0',
                    },
                    handler=self.HANDLER_CLASS)
@@ -380,7 +394,7 @@ class BaseTest(unittest.TestCase):
         get_config('hello', 'world',
                    {
                     'filename': 'mismatch.ini',
-                    'search_path': 'testdata/versioned:testdata/versioned2',
+                    'search_path': '{0}/versioned:{0}/versioned2'.format(self.DATA_PATH),
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains(
@@ -401,11 +415,11 @@ class BaseTest(unittest.TestCase):
                          XDG_CONFIG_HOME=''):
             result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
             self.assertEqual([
-                '/etc/foo/bar/app.ini',
-                '/xdgpath2/foo/bar/app.ini',
-                '/xdgpath1/foo/bar/app.ini',
-                expanduser('~/.config/foo/bar/app.ini'),
-                abspath('.foo/bar/app.ini')
+                '/etc/foo/bar/%s' % self.APP_FILENAME,
+                '/xdgpath2/foo/bar/%s' % self.APP_FILENAME,
+                '/xdgpath1/foo/bar/%s' % self.APP_FILENAME,
+                expanduser('~/.config/foo/bar/%s' % self.APP_FILENAME),
+                abspath('.foo/bar/%s' % self.APP_FILENAME)
             ], result.meta.active_path)
 
     def test_xdg_empty_config_dirs(self):
@@ -413,10 +427,10 @@ class BaseTest(unittest.TestCase):
                          XDG_CONFIG_HOME=''):
             result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
             self.assertEqual([
-                '/etc/foo/bar/app.ini',
-                '/etc/xdg/foo/bar/app.ini',
-                expanduser('~/.config/foo/bar/app.ini'),
-                abspath('.foo/bar/app.ini')
+                '/etc/foo/bar/%s' % self.APP_FILENAME,
+                '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
+                expanduser('~/.config/foo/bar/%s' % self.APP_FILENAME),
+                abspath('.foo/bar/%s' % self.APP_FILENAME)
             ], result.meta.active_path)
 
     def test_xdg_config_home(self):
@@ -424,10 +438,10 @@ class BaseTest(unittest.TestCase):
                          XDG_CONFIG_DIRS=''):
             result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
             self.assertEqual([
-                '/etc/foo/bar/app.ini',
-                '/etc/xdg/foo/bar/app.ini',
-                '/path/to/config/home/foo/bar/app.ini',
-                abspath('.foo/bar/app.ini')
+                '/etc/foo/bar/%s' % self.APP_FILENAME,
+                '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
+                '/path/to/config/home/foo/bar/%s' % self.APP_FILENAME,
+                abspath('.foo/bar/%s' % self.APP_FILENAME)
             ], result.meta.active_path)
 
     def test_xdg_empty_config_home(self):
@@ -435,10 +449,10 @@ class BaseTest(unittest.TestCase):
                          XDG_CONFIG_DIRS=''):
             result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
             self.assertEqual([
-                '/etc/foo/bar/app.ini',
-                '/etc/xdg/foo/bar/app.ini',
-                expanduser('~/.config/foo/bar/app.ini'),
-                abspath('.foo/bar/app.ini')
+                '/etc/foo/bar/%s' % self.APP_FILENAME,
+                '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
+                expanduser('~/.config/foo/bar/%s' % self.APP_FILENAME),
+                abspath('.foo/bar/%s' % self.APP_FILENAME)
             ], result.meta.active_path)
 
     def test_both_xdg_variables(self):
@@ -446,11 +460,11 @@ class BaseTest(unittest.TestCase):
                          XDG_CONFIG_HOME='/xdg/config/home'):
             result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
             self.assertEqual([
-                '/etc/foo/bar/app.ini',
-                '/xdgpath2/foo/bar/app.ini',
-                '/xdgpath1/foo/bar/app.ini',
-                '/xdg/config/home/foo/bar/app.ini',
-                abspath('.foo/bar/app.ini')
+                '/etc/foo/bar/%s' % self.APP_FILENAME,
+                '/xdgpath2/foo/bar/%s' % self.APP_FILENAME,
+                '/xdgpath1/foo/bar/%s' % self.APP_FILENAME,
+                '/xdg/config/home/foo/bar/%s' % self.APP_FILENAME,
+                abspath('.foo/bar/%s' % self.APP_FILENAME)
             ], result.meta.active_path)
 
     def test_filename_in_log_minor(self):
@@ -459,14 +473,14 @@ class BaseTest(unittest.TestCase):
         """
         get_config('hello', 'world',
                    {
-                       'search_path': 'testdata/versioned',
+                       'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '2.0'
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
-            'testdata/versioned/app.ini')
+            '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
 
     def test_filename_in_log_major(self):
         """
@@ -474,14 +488,14 @@ class BaseTest(unittest.TestCase):
         """
         get_config('hello', 'world',
                    {
-                       'search_path': 'testdata/versioned',
+                       'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '5.0',
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
-            'testdata/versioned/app.ini')
+            '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
 
 
 class IniTest(BaseTest):

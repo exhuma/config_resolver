@@ -197,7 +197,7 @@ def effective_path(config_id, search_path=''):
         additional_paths = env_path[1:].split(pathsep)
         log.info('Search path extended with %r by the environment '
                  'variable %s.',
-                 additional_paths,
+                 env_path,
                  env_path_name)
         path.extend(additional_paths)
     elif env_path:

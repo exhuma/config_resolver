@@ -4,6 +4,7 @@ from distutils.version import StrictVersion
 from configparser import ConfigParser
 
 LOG = logging.getLogger(__name__)
+DEFAULT_FILENAME = 'app.ini'
 
 
 def empty():
