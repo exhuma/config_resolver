@@ -98,19 +98,6 @@ class TestableHandler(logging.Handler):
 
 
 class CommonTests:
-    HANDLER_CLASS = None
-    TEST_FILENAME = 'test.ini'
-    APP_FILENAME = 'app.ini'
-    SECURE_FILENAME = 'secure.ini'
-    DATA_PATH = 'testdata/ini'
-    MISMATCH_FILENAME = 'mismatch.json'
-    TEST_STRING = dedent(
-        '''\
-        [section_mem]
-        val = 1
-        '''
-    )
-    EXPECTED_OBJECT_TYPE = ConfigParser
 
     def setUp(self):
         logger = logging.getLogger()
