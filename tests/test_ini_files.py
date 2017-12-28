@@ -4,6 +4,7 @@ Tests the default "INI" file handler.
 This also includes the main functionality tests.
 '''
 from contextlib import contextmanager
+from configparser import ConfigParser
 import logging
 import os
 import re
@@ -109,6 +110,7 @@ class CommonTests:
         val = 1
         '''
     )
+    EXPECTED_OBJECT_TYPE = ConfigParser
 
     def setUp(self):
         logger = logging.getLogger()
@@ -125,14 +127,14 @@ class CommonTests:
         self.assertTrue(config.has_section('section_mem'))
         self.assertEqual(self._get(config, 'section_mem', 'val'), '1')
 
-    def test_simple_init(self):
+    def test_return_type(self):
         '''
-        If we find a file named ``app.ini`` in ``search_path``, we load that.
+        Returned objects should be of the expected type from the parser.
         '''
         result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
-        self.assertTrue(config.has_section('section1'))
+        self.assertIsInstance(config, self.EXPECTED_OBJECT_TYPE)
 
     def test_get(self):
         result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
@@ -514,6 +516,7 @@ class IniTest(CommonTests, unittest.TestCase):
         val = 1
         '''
     )
+    EXPECTED_OBJECT_TYPE = ConfigParser
 
     def _get(self, config, section, option, default=None):
         return config.get(section, option, fallback=default)
@@ -538,6 +541,7 @@ class JsonTest(CommonTests, unittest.TestCase):
         }
         '''
     )
+    EXPECTED_OBJECT_TYPE = dict
 
     def _get(self, config, section, option, default=None):
         if section not in config or option not in config[section]:

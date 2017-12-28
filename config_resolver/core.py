@@ -78,7 +78,7 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     # Store the complete list of all inspected items
     active_path = [join(_, filename) for _ in effective_path(config_id)]
 
-    output = ini.empty()
+    output = handler.empty()
     found_files = find_files(
         config_id,
         default_options['search_path'],
