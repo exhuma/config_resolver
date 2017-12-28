@@ -123,7 +123,7 @@ class CommonTests:
         result = from_string(self.TEST_STRING, handler=self.HANDLER_CLASS)
         config = result.config
         self.assertTrue(config.has_section('section_mem'))
-        self.assertEqual(config.get('section_mem', 'val'), '1')
+        self.assertEqual(self._get(config, 'section_mem', 'val'), '1')
 
     def test_simple_init(self):
         '''
@@ -138,21 +138,21 @@ class CommonTests:
         result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
-        self.assertEqual(config.get('section1', 'var1'), 'foo')
-        self.assertEqual(config.get('section1', 'var2'), 'bar')
-        self.assertEqual(config.get('section2', 'var1'), 'baz')
+        self.assertEqual(self._get(config, 'section1', 'var1'), 'foo')
+        self.assertEqual(self._get(config, 'section1', 'var2'), 'bar')
+        self.assertEqual(self._get(config, 'section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
         result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
-        self.assertIs(config.get('section1', 'b', fallback=None), None)
+        self.assertIs(self._get(config, 'section1', 'b', default=None), None)
 
     def test_no_section_error(self):
         result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
-        self.assertIs(config.get('a', 'b', fallback=None), None)
+        self.assertIs(self._get(config, 'a', 'b', default=None), None)
 
     def test_env_name(self):
         with environment(HELLO_WORLD_FILENAME=self.TEST_FILENAME,
@@ -234,8 +234,8 @@ class CommonTests:
                             {'search_path': '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)},
                             handler=self.HANDLER_CLASS)
         config = result.config
-        self.assertTrue(config.has_section('section3'))
-        self.assertEqual(config.get('section1', 'var1'), 'frob')
+        self.assertEqual(self._get(config, 'section3', 'var1'), 'Hello World!')
+        self.assertEqual(self._get(config, 'section1', 'var1'), 'frob')
         self.assertEqual(
             result.meta.loaded_files,
             [
@@ -251,7 +251,7 @@ class CommonTests:
                                 'search_path': self.DATA_PATH,
                             },
                             handler=self.HANDLER_CLASS)
-        self.assertEqual(result.config.get('section2', 'var1'), 'baz')
+        self.assertEqual(self._get(result.config, 'section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
         result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
@@ -362,7 +362,7 @@ class CommonTests:
         meta = result.meta
         # Values should not be loaded. Let's check if they really are missing.
         # They should be!
-        self.assertFalse('section1' in config.sections())
+        self.assertFalse('section1' in self._sections(config))
 
         # Also, no files should be added to the "loaded_files" list.
         self.assertEqual(meta.loaded_files, [])
@@ -515,6 +515,13 @@ class IniTest(CommonTests, unittest.TestCase):
         '''
     )
 
+    def _get(self, config, section, option, default=None):
+        return config.get(section, option, fallback=default)
+
+    def _sections(self, config):
+        return set(config.sections())
+
+
 class JsonTest(CommonTests, unittest.TestCase):
     HANDLER_CLASS = json
     TEST_FILENAME = 'test.json'
@@ -531,6 +538,14 @@ class JsonTest(CommonTests, unittest.TestCase):
         }
         '''
     )
+
+    def _get(self, config, section, option, default=None):
+        if section not in config or option not in config[section]:
+            return default
+        return config[section][option]
+
+    def _sections(self, config):
+        return set(config.keys())
 
     def test_from_string(self):
         self.skipTest('The test-code is currenty no compatible with JSON files')
