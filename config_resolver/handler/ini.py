@@ -1,9 +1,7 @@
-import logging
 from distutils.version import StrictVersion
 
 from configparser import ConfigParser
 
-LOG = logging.getLogger(__name__)
 DEFAULT_FILENAME = 'app.ini'
 
 
@@ -12,14 +10,12 @@ def empty():
 
 
 def from_string(data):
-    LOG.debug('Loading config from string')
     parser = ConfigParser()
     parser.read_string(data)
     return parser
 
 
 def from_filename(filename):
-    LOG.debug('Loading config from %r', filename)
     parser = ConfigParser()
     with open(filename) as fp:
         parser.readfp(fp)
@@ -35,6 +31,5 @@ def get_version(parser):
 
 
 def update_from_file(parser, filename):
-    LOG.debug('Updating %r from %r', parser, filename)
     with open(filename) as fp:
         parser.readfp(fp)
