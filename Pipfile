@@ -10,6 +10,9 @@ name = "pypi"
 pytest = "*"
 pytest-cache = "*"
 pytest-xdist = "*"
+pytest-coverage = "*"
+sphinx = "*"
+pylint = "*"
 
 
 [packages]

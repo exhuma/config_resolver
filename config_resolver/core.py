@@ -122,7 +122,6 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     ))
 
 
-
 def prefixed_logger(config_id):
     '''
     Returns a log instance for a given group- & app-name pair.
@@ -252,6 +251,10 @@ def effective_filename(config_id, config_filename):
 
 
 def env_name(config_id):
+    '''
+    Return the name of the environment variable which contains the file-name to
+    load.
+    '''
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 

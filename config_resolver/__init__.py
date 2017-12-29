@@ -1,3 +1,13 @@
+'''
+Main package for config_resolver. It provides a central point for imports, for
+example::
+
+    from config_resolver import get_config
+
+It also provides metadata:
+
+* ``config_resolver.__version__``
+'''
 from os.path import dirname, join
 
 from .core import (
