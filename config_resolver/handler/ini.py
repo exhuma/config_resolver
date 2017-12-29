@@ -18,7 +18,7 @@ def from_string(data):
 def from_filename(filename):
     parser = ConfigParser()
     with open(filename) as fp:
-        parser.readfp(fp)
+        parser.read_file(fp)
     return parser
 
 
@@ -32,4 +32,4 @@ def get_version(parser):
 
 def update_from_file(parser, filename):
     with open(filename) as fp:
-        parser.readfp(fp)
+        parser.read_file(fp)
