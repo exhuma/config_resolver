@@ -6,6 +6,9 @@ def autotest():
     '''
     Set up automatic test runner with pytest and inotify.
     '''
+    with fab.shell_env(PYTHONWARNINGS=''), fab.settings(warn_only=True):
+        fab.local('pipenv run pytest tests')
+
     with fab.quiet():
         result = fab.local('which inotifywait > /dev/null')
         if result.failed:
