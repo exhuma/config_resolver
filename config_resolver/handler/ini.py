@@ -2,9 +2,9 @@
 Handler for INI files
 '''
 
-from distutils.version import StrictVersion
-
 from configparser import ConfigParser
+
+from config_resolver.dirty import StrictVersion
 
 DEFAULT_FILENAME = 'app.ini'
 
@@ -30,8 +30,8 @@ def from_filename(filename):
     Create a configuration instance from a file-name.
     '''
     parser = ConfigParser()
-    with open(filename) as fp:
-        parser.read_file(fp)
+    with open(filename) as fptr:
+        parser.read_file(fptr)
     return parser
 
 
@@ -39,7 +39,8 @@ def get_version(parser):
     '''
     Retrieve the parsed version number from a given config instance.
     '''
-    if not parser.has_section('meta') or not parser.has_option('meta', 'version'):
+    if (not parser.has_section('meta') or
+            not parser.has_option('meta', 'version')):
         return None
     raw_value = parser.get('meta', 'version')
     parsed = StrictVersion(raw_value)
@@ -52,5 +53,5 @@ def update_from_file(parser, filename):
 
     The config instance in *data* will be modified in-place!
     '''
-    with open(filename) as fp:
-        parser.read_file(fp)
+    with open(filename) as fptr:
+        parser.read_file(fptr)

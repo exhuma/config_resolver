@@ -5,8 +5,6 @@ This module contains stuff which is not directly impacting the business logic of
 the config_resolver package.
 """
 
-import sys
-
 
 class PrefixFilter(object):
     """

@@ -8,6 +8,8 @@ It also provides metadata:
 
 * ``config_resolver.__version__``
 '''
+# pylint: disable=unused-import
+
 from os.path import dirname, join
 
 from .core import (

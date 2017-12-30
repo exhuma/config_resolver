@@ -5,18 +5,18 @@ way of handling configuration files. Additional care has been taken to allow
 the end-user of the application to override this lookup process.
 """
 
-from .exc import NoVersionError
-from .util import (
-    PrefixFilter,
-)
-from collections import namedtuple
-from os import getenv, pathsep, getcwd, stat as get_stat
-from os.path import expanduser, exists, join, abspath
 import logging
 import stat
-from distutils.version import StrictVersion
+from collections import namedtuple
+from os import stat as get_stat
+from os import getcwd, getenv, pathsep
+from os.path import abspath, exists, expanduser, join
+
+from config_resolver.dirty import StrictVersion
 from config_resolver.handler import ini
 
+from .exc import NoVersionError
+from .util import PrefixFilter
 
 ConfigID = namedtuple('ConfigID', 'group app')
 LookupResult = namedtuple('LookupResult', 'config meta')
@@ -25,7 +25,8 @@ LookupMetadata = namedtuple('LookupMetadata', [
     'loaded_files',
     'config_id'
 ])
-FileReadability = namedtuple('FileReadability', 'is_readable filename reason version')
+FileReadability = namedtuple(
+    'FileReadability', 'is_readable filename reason version')
 
 
 def from_string(data, handler=None):
@@ -79,10 +80,7 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     active_path = [join(_, filename) for _ in effective_path(config_id)]
 
     output = handler.empty()
-    found_files = find_files(
-        config_id,
-        default_options['search_path'],
-        filename)
+    found_files = find_files(config_id, search_path, filename)
 
     current_version = version
     for filename in found_files:
@@ -104,7 +102,8 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
             handler.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
-            log.warning('Skipping unreadable file %s (%s)', filename, readability.reason)
+            log.warning('Skipping unreadable file %s (%s)', filename,
+                        readability.reason)
 
     if not loaded_files and not require_load:
         log.warning(
@@ -220,8 +219,6 @@ def find_files(config_id, search_path=None, filename=None):
         folders will be searched in the specified order.
     :param filename: The name of the file we search for.
     """
-    log = prefixed_logger(config_id)
-
     path = effective_path(config_id, search_path)
     config_filename = effective_filename(config_id, filename)
 
@@ -312,4 +309,5 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
             return FileReadability(False, filename, msg, instance_version)
-    return FileReadability(insecure_readable, filename, unreadable_reason, instance_version)
+    return FileReadability(insecure_readable, filename, unreadable_reason,
+                           instance_version)

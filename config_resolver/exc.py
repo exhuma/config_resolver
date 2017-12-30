@@ -9,6 +9,3 @@ class NoVersionError(Exception):
     present in the config file but does not find one.
     """
     pass
-
-
-
