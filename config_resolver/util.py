@@ -5,8 +5,6 @@ This module contains stuff which is not directly impacting the business logic of
 the config_resolver package.
 """
 
-import sys
-
 
 class PrefixFilter(object):
     """
@@ -44,28 +42,3 @@ class PrefixFilter(object):
         # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True
-
-
-try:
-    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
-
-if sys.hexversion < 0x030000F0:
-    # Python 2
-    # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(SafeConfigParser, object):
-        """
-        A default "base" object simplifying Python 2 and Python 3
-        compatibility.
-        """
-else:
-    # Python 3
-    # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
-        """
-        A default "base" object simplifying Python 2 and Python 3
-        compatibility.
-        """
-
-

@@ -2,6 +2,7 @@
 /*.egg-info
 /.cache
 /.coverage
+/Pipfile.lock
 /app.ini
 /build
 /dist
