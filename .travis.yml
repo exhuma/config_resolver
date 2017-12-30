@@ -3,7 +3,8 @@ python:
   - "2.7"
   - "3.4"
   - "3.5"
-  - "3.5-dev" # 3.5 development branch
+  - "3.6"
+  - "3.6-dev" # 3.6 development branch
   - "nightly" # currently points to 3.6-dev
-install: "pip install ."
-script: "pytest test.py"
+install: "pipenv install -d"
+script: "pytest tests"
