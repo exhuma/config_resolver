@@ -80,7 +80,8 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     loaded_files = []
 
     # Store the complete list of all inspected items
-    active_path = [join(_, filename) for _ in effective_path(config_id)]
+    active_path = [join(_, filename)
+                   for _ in effective_path(config_id, search_path)]
 
     output = handler.empty()
     found_files = find_files(config_id, search_path, filename)

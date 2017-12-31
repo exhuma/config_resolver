@@ -97,6 +97,17 @@ class CommonTests:
             result.meta.active_path,
             expected)
 
+    def test_lookup_options_path(self):
+        path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
+        result = get_config('hello', 'world', {'search_path': path},
+                            handler=self.HANDLER_CLASS)
+        expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                    '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                    '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)]
+        self.assertEqual(
+            result.meta.active_path,
+            expected)
+
     def test_env_path_override_log(self):
         path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
         with environment(HELLO_WORLD_PATH=path):

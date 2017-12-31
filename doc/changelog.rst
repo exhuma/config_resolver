@@ -1,3 +1,34 @@
+Release 5.0.0
+-------------
+
+.. warning::
+
+    Major API changes! Read the full documentation before upgrading!
+
+* Add the possibility to supply a custom file "handler" (f.ex. YAML or other
+  custom parsers).
+* Add :py:mod:`config_resolver.handler.json` as optional file-handler.
+* Refactored from a simple module to a full-fledged Python package
+* Retrieving a config instance no longer returns a subclass of the
+  :py:class:`configparser.ConfigParser` class. Instead, it will return whatever
+  the supplied handler creates.
+* External API changed to a functional API. You no longer call the ``Config``
+  constructor, but instead use the :py:func:`~config_resolver.get_config()`
+  function.
+* Retrieval meta-data is returned along-side the retrieved config. This
+  separation allows a custom handler to return any type without impacting the
+  internal logic of ``config_resolver``.
+* Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
+  XDG standar ``~/.config/group-name/app-name``.
+
+Release 4.2.0
+-------------
+
+Features added
+~~~~~~~~~~~~~~
+
+* GROUP and APP names are now included in the log messages.
+
 Release 4.1.0
 -------------
 
