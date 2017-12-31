@@ -8,6 +8,7 @@ the end-user of the application to override this lookup process.
 import logging
 import stat
 from collections import namedtuple
+from functools import lru_cache
 from os import stat as get_stat
 from os import getcwd, getenv, pathsep
 from os.path import abspath, exists, expanduser, join
@@ -23,7 +24,8 @@ LookupResult = namedtuple('LookupResult', 'config meta')
 LookupMetadata = namedtuple('LookupMetadata', [
     'active_path',
     'loaded_files',
-    'config_id'
+    'config_id',
+    'prefix_filter'
 ])
 FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
@@ -39,7 +41,8 @@ def from_string(data, handler=None):
     return LookupResult(new_config, LookupMetadata(
         '<unknown>',
         '<unknown>',
-        ConfigID('<unknown>', '<unknown>')
+        ConfigID('<unknown>', '<unknown>'),
+        None
     ))
 
 
@@ -51,7 +54,7 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     '''
     handler = handler or ini
     config_id = ConfigID(group_name, app_name)
-    log = prefixed_logger(config_id)
+    log, prefix_filter = prefixed_logger(config_id)
 
     default_options = {
         'search_path': [],
@@ -117,13 +120,15 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     return LookupResult(output, LookupMetadata(
         active_path,
         loaded_files,
-        config_id
+        config_id,
+        prefix_filter
     ))
 
 
+@lru_cache(5)
 def prefixed_logger(config_id):
     '''
-    Returns a log instance for a given group- & app-name pair.
+    Returns a log instance and prefix filter for a given group- & app-name pair.
     '''
     log = logging.getLogger('config_resolver.{}.{}'.format(
         config_id.group,
@@ -132,7 +137,7 @@ def prefixed_logger(config_id):
         config_id.group, config_id.app), separator=':')
     if prefix_filter not in log.filters:
         log.addFilter(prefix_filter)
-    return log
+    return log, prefix_filter
 
 
 def get_xdg_dirs(config_id):
@@ -143,7 +148,7 @@ def get_xdg_dirs(config_id):
     The list is sorted by precedence, with the most important item coming
     *last* (required by the existing config_resolver logic).
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     config_dirs = getenv('XDG_CONFIG_DIRS', '')
     if config_dirs:
         log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
@@ -159,7 +164,7 @@ def get_xdg_home(config_id):
     Returns the value specified in the XDG_CONFIG_HOME environment variable
     or the appropriate default.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     config_home = getenv('XDG_CONFIG_HOME', '')
     if config_home:
         log.debug('XDG_CONFIG_HOME is set to %r', config_home)
@@ -173,7 +178,7 @@ def effective_path(config_id, search_path=''):
     precedence. In other words: the last path element will override the
     settings from the first one.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
 
     # default search path
     path = (['/etc/%s/%s' % (config_id.group, config_id.app)] +
@@ -234,7 +239,7 @@ def effective_filename(config_id, config_filename):
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
 
     env_filename = getenv(env_name(config_id))
     if env_filename:
@@ -260,7 +265,7 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     handler = handler or ini
 
     if not exists(filename):

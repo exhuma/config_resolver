@@ -409,5 +409,11 @@ class CommonTests:
             logging.ERROR,
             '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
 
-
-
+    def test_prefix_filter_available(self):
+        '''
+        The docs state that the prefix-filter for the loggers is available in
+        the metadata. Make sure this is really the case. This is a good idea so
+        users can easily remove the filter necessary.
+        '''
+        result = get_config('hello', 'world')
+        self.assertIsNotNone(result.meta.prefix_filter)
