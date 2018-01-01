@@ -16,7 +16,9 @@ API
    :maxdepth: 1
 
    handlers
+   meta
    api/modules
+   glossary
 
 .. include:: ../README.rst
 
