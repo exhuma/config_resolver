@@ -15,38 +15,49 @@ API
 .. toctree::
    :maxdepth: 1
 
-   api
+   handlers
+   api/modules
 
 .. include:: ../README.rst
 
 Description / Usage
 ~~~~~~~~~~~~~~~~~~~
 
-The module provides two main classes:
+The module provides one function to retrieve a config instance:
 
-* :py:class:`~config_resolver.Config`: This is the default class.
-* :py:class:`~config_resolver.SecuredConfig`: This is a subclass of
-  :py:class:`~config_resolver.Config` which refuses to load files which a
-  readable by other people than the owner.
+* :py:func:`~config_resolver.core.get_config`
 
-The simple usage for both is identical. The only difference is the above
-mentioned decision to load files or not::
+and one function to create a config from a text-string:
 
-    from config_resolver imoprt Config
-    cfg = Config('acmecorp', 'bird_feeder')
+* :py:func:`~config_resolver.core.from_string`
+
+A simple usage looks like this::
+
+    from config_resolver imoprt get_config
+    result = get_config('acmecorp', 'bird_feeder')
+    cfg = result.config
 
 This will look for config files in (in that order):
 
 * ``/etc/acmecorp/bird_feeder/app.ini``
 * ``/etc/xdg/acmecorp/bird_feeder/app.ini``
-* ``~/.acmecorp/bird_feeder/app.ini`` -- This will be deprecated (no longer
-  loaded) in ``config_resolver 5.0``
 * ``~/.config/acmecorp/bird_feeder/app.ini``
 * ``./.acmecorp/bird_feeder/app.ini``
 
 If all files exist, one which is loaded later, will override the values of an
 earlier file. No values will be removed, this means you can put system-wide
 defaults in ``/etc`` and specialise/override from there.
+
+.. note::
+
+    The above is true for the file handlers included with
+    :py:mod:`config_resolver`.  Since version 5.0 it is possible to provide
+    custom file-handlers, which may behave differently. If using a custom
+    file-handler make sure to understand how it behaves! See
+    :ref:`custom-handler`.
+
+
+.. _xdg-spec:
 
 The Freedesktop XDG standard
 ----------------------------
@@ -67,15 +78,28 @@ XDG item                        overrides
 ``$XDG_CONFIG_DIRS``            ``$GROUP_APP_PATH``
 ============================== =======================
 
-.. tip:: If a config file is found at ``~/.<group>/<app>``, a log message with
-         a warning is issued since config_resolver 4.1.0 encouraging the
-         end-user to move the config file to ``~/.config/<group>/<app>``.
-
-Files are parsed using the default Python :py:class:`configparser.ConfigParser`
-(i.e. ``ini`` files).
+By default, files are parsed using the default Python
+:py:class:`configparser.ConfigParser` (i.e. ``ini`` files). Custom file
+"handlers" may read other formats. See :ref:`custom-handler`.
 
 Advanced Usage
 ~~~~~~~~~~~~~~
+
+The way config_resolver finds files can be controlled by an optional
+``lookup_options`` argument to :py:func:`~config_resolver.core.get_config`.
+This is a dictionary controlling how the files are searched and which files are
+valid.  The default options are::
+
+    default_options = {
+        'search_path': [],  # <- empty list here triggers the default search path
+        'filename': 'app.ini',  # <- this depends on the file-handler
+        'require_load': False,
+        'version': None,
+        'secure': False,
+    }
+
+All values in the dictionary are optional. Not all values have to be supplied.
+Missing values will use the default value shown above.
 
 Versioning
 ----------
@@ -85,10 +109,11 @@ config file. If in a later version of your application, you decide to change a
 configuration value's name, remove a variable, or require a new one the
 end-user needs to be notified.
 
-For this use-case, you can create versioned :py:class:`config_resolver.Config`
-instances in your application::
+For this use-case, you can use the lookup option ``version`` to allow only
+files of the proper version to be loaded. If the version differs in a detected
+file, a log message will be emitted::
 
-    cfg = Config('group', 'app', version='2.1')
+    result = get_config('group', 'app', {'version': '2.1'})
 
 Config file example::
 
@@ -117,12 +142,12 @@ Requiring files (bail out if no config is found)
 ------------------------------------------------
 
 Since version 3.3.0, you have a bit more control about how files are loaded.
-The :py:class:`config_resolver.Config` class takes a new argument:
-``require_load``. If this is set to ``True``, an :py:exc:`OSError` is raised
-if no config file was loaded. Alternatively, and, purely a matter of taste, you
-can leave this on it's default ``False`` value and inspect the ``loaded_files``
-attribute on the :py:class:`config_resolver.Config` instance. If it's empty,
-nothing has been loaded.
+The :py:func:`~config_resolver.core.get_config` function takes the
+lookup_options value ``require_load``. If this is set to ``True``, an
+:py:exc:`OSError` is raised if no config file was loaded. Alternatively, and,
+purely a matter of taste, you can leave this on it's default ``False`` value
+and inspect the ``loaded_files`` attribute on the ``meta`` attribute of the
+returned result. If it's empty, nothing has been loaded.
 
 Overriding internal defaults
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,14 +160,14 @@ By the application developer
 ----------------------------
 
 Apart from the "group name" and "application name", the
-:py:class:`config_resolver.Config` class accepts ``search_path`` and
-``filename`` as arguments. ``search_path`` controls to what folders are
-searched for config files, ``filename`` controls the basename of the config
-file. ``filename`` is especially useful if you want to separate different
-concepts into different files::
+:py:func:`~config_resolver.core.get_config` function accepts ``search_path``
+and ``filename`` as values in ``lookup_options``. ``search_path`` controls to
+what folders are searched for config files, ``filename`` controls the basename
+of the config file. ``filename`` is especially useful if you want to separate
+different concepts into different files::
 
-    app_cfg = Config('acmecorp', 'bird_feeder')
-    db_cfg = Config('acmecorp', 'bird_feeder', filename='db.ini')
+    app_cfg = get_config('acmecorp', 'bird_feeder').config
+    db_cfg = get_config('acmecorp', 'bird_feeder', {'filename': 'db.ini'})
 
 By the end-user
 ---------------
@@ -151,12 +176,12 @@ The end-user has access to two environment variables:
 
 * ``<GROUP_NAME>_<APP_NAME>_PATH`` overrides the default search path.
 * ``XDG_CONFIG_HOME`` overrides the path considered as "home" locations for
-  config files (default=``~/.config``)
+  config files (default = ``~/.config``)
 * ``XDG_CONFIG_DIRS`` overrides additional path elements as recommended by
   `the freedesktop.org XDG basedir spec`_. Paths are separated by ``:`` and are
   sorted with descending precedence (leftmost is the most important one).
 * ``<GROUP_NAME>_<APP_NAME>_FILENAME`` overrides the default basename of the
-  config file (default=``app.ini``).
+  config file (default = ``app.ini``).
 
 
 Logging
@@ -172,7 +197,7 @@ those messages on-screen you could do the following::
     import logging
     from config_resolver import Config
     logging.basicConfig(level=logging.DEBUG)
-    conf = Config('mycompany', 'myapplication')
+    conf = get_config('mycompany', 'myapplication').config
 
 If you want to use the ``INFO`` level in your application, but silence only the
 config_resolver logs, add the following to your code::
@@ -182,11 +207,11 @@ config_resolver logs, add the following to your code::
 As of version 4.2.0, all log messages are prefixed with the group and
 application name. This helps identifying log messages if multiple packages in
 your application use ``config_resolver``. The prefix filter can be accessed via
-the instance member ``_prefix_filter`` if you want to change or remove it::
+the "meta" member ``prefix_filter`` if you want to change or remove it::
 
     from config_resolver import Config
-    conf = Config('mycompany', 'myapplication')
-    print conf._prefix_filter
+    conf = get_config('mycompany', 'myapplication')
+    print(conf.meta.prefix_filter)
 
 More detailed information about logging is out of the scope of this document.
 Consider reading the `logging tutorial`_ of the official Python docs.

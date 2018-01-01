@@ -37,8 +37,8 @@ Features added
 
 * XDG Basedir support
 
-  ``config_resolver`` will now search in the folders/names defined in the `XDG
-  specification`_.
+  ``config_resolver`` will now search in the folders/names defined in the :ref:`XDG
+  specification <xdg-spec>`.
 
 
 Release 4.0.0
