@@ -21,7 +21,7 @@ setup(
     include_package_data=True,
     packages=['config_resolver'],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU Lesser General Public License v3 '
         '(LGPLv3)',
