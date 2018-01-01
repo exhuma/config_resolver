@@ -5,6 +5,7 @@ Release 5.0.0
 
     Major API changes! Read the full documentation before upgrading!
 
+* Python 2 support is now dropped!
 * Add the possibility to supply a custom file "handler" (f.ex. YAML or other
   custom parsers).
 * Add ``config_resolver.handler.json`` as optional file-handler.
@@ -19,6 +20,22 @@ Release 5.0.0
   internal logic of ``config_resolver``.
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
   XDG standar ``~/.config/group-name/app-name``.
+
+Upgrading from 4.x
+~~~~~~~~~~~~~~~~~~
+
+* Replace ``Config`` with ``get_config``
+* The result from the call to ``get_config`` now returns two objects: The
+  config instance and additional metadata.
+* The following attributes moved to the meta-data object:
+
+  * ``active_path``
+  * ``prefix_filter``
+  * ``loaded_files``
+
+* Return types for INI files is now a standard library instance of
+  :py:class:`configparser.ConfigParser`. This means that the ``default``
+  keyword argument to ``get`` has been replaced with ``fallback``.
 
 Release 4.2.0
 -------------
