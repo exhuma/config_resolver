@@ -214,106 +214,52 @@ upper-case and are prefixed with both group- and application-name.
     See the `XDG specification`_
 
 
-Difference to ConfigParser
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is one **major** difference to the default Python
-:py:class:`~configparser.ConfigParser`: the
-:py:meth:`~config_resolver.Config.get` method accepts a "default" parameter. If
-specified, that value is returned in case
-:py:class:`~configparser.ConfigParser` does not return a value. Remember that
-the ``ConfigParser`` instance supports defaults as well if specified in the
-constructor.
-
-Using the ``default`` parameter on :py:meth:`~config_resolver.Config.get`, you
-can now have two options with the same name in two sections with *different*
-values.  Imagine the following::
-
-    [database1]
-    dsn=sqlite:///tmp/db.sqlite3
-
-    [database2]
-    dsn=sqlite:///tmp/db2.sqlite3
-
-In the core :py:class:`~configparser.ConfigParser` you could *not* specify two
-different default values! The ``default`` parameter makes this possible.
-
-.. note::
-    *AGAIN:* The core :py:class:`~configparser.ConfigParser` default mechanism
-    still takes precedence!
-
 Debugging
 ---------
 
-Creating an instance of :py:class:`~config_resolver.Config` will not raise an
-error (except if explicitly asked to do so).  Instead it will always return a
-valid, (but possibly empty) instance. So errors can be hard to see sometimes.
+Calling :py:func:`~config_resolver.core.get_config` will not raise an error
+(except if explicitly asked to do so).  Instead it will always return a valid,
+(but possibly empty) instance. So errors can be hard to see sometimes.
 
 The idea behind this, is to encourage you to have sensible default values, so
-that the application can run, even without configuration. For
-"development-time" exceptions, consider calling
-:py:meth:`~config_resolver.Config.get` without a default value.
+that the application can run, even without configuration.
 
 Your first stop should be to configure logging and look at the emitted
 messages.
 
 In order to determine whether any config file was loaded, you can look into the
-``loaded_files`` instance variable. It contains a list of all the loaded files,
+``loaded_files`` "meta" variable. It contains a list of all the loaded files,
 in the order of loading.  If that list is empty, no config has been found. Also
 remember that the order is important. Later elements will override values from
-earlier elements.
+earlier elements (depending of the used ``handler``).
 
-Additionally, another instance variable named ``active_path`` represents the
+Additionally, another "meta" variable named ``active_path`` represents the
 search path after processing of environment variables and runtime parameters.
-This may also be useful to display informtation to the end-user.
+This may also be useful to display information to the end-user.
 
 
 Examples
 ========
 
-A simple config instance (with logging)::
+A simple config instance (with logging):
 
-    import logging
-    from config_resolver import Config
+.. literalinclude:: examples/example01.py
+   :language: python
 
-    logging.basicConfig(level=logging.DEBUG)
-    cfg = Config("acmecorp", "bird_feeder")
-    print cfg.get('section', 'var')
+An instance which will not load unsecured files:
 
-An instance which will not load unsecured files::
+.. literalinclude:: examples/example02.py
+   :language: python
 
-    import logging
-    from config_resolver import SecuredConfig
+Loading a versioned config file:
 
-    logging.basicConfig(level=logging.DEBUG)
-    cfg = SecuredConfig("acmecorp", "bird_feeder")
-    print cfg.get('section', 'var')
+.. literalinclude:: examples/example03.py
+   :language: python
 
-Loading a versioned config file::
+Inspect the "meta" variables:
 
-    import logging
-    from config_resolver import Config
-
-    logging.basicConfig(level=logging.DEBUG)
-    cfg = Config("acmecorp", "bird_feeder", version="1.0")
-    print cfg.get('section', 'var')
-
-Default values::
-
-    import logging
-    from config_resolver import Config
-
-    logging.basicConfig(level=logging.DEBUG)
-    cfg = Config("acmecorp", "bird_feeder", version="1.0")
-
-    # This will not raise an error (but emit a DEBUG log entry).
-    print cfg.get('section', 'example_non_existing_option_name', default=10)
-
-    # this may raise a "NoOptionError"
-    print cfg.get('section', 'example_non_existing_option_name')
-
-    # this may raise a "NoSectionError"
-    print cfg.get('example_non_existing_section_name', 'varname')
+.. literalinclude:: examples/example04.py
+   :language: python
 
 
 Indices and tables
