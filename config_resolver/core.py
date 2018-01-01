@@ -79,9 +79,10 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
 
     loaded_files = []
 
+    search_path = effective_path(config_id, search_path)
+
     # Store the complete list of all inspected items
-    active_path = [join(_, filename)
-                   for _ in effective_path(config_id, search_path)]
+    active_path = [join(_, filename) for _ in search_path]
 
     output = handler.empty()
     found_files = find_files(config_id, search_path, filename)
@@ -113,10 +114,10 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
         log.warning(
             "No config file named %s found! Search path was %r",
             filename,
-            default_options['search_path'])
+            search_path)
     elif not loaded_files and require_load:
         raise IOError("No config file named %s found! Search path "
-                      "was %r" % (filename, default_options['search_path']))
+                      "was %r" % (filename, search_path))
 
     return LookupResult(output, LookupMetadata(
         active_path,
@@ -220,17 +221,14 @@ def find_files(config_id, search_path=None, filename=None):
     Looks for files in default locations. Returns an iterator of filenames.
 
     :param config_id: A "ConfigID" object used to identify the config folder.
-    :param search_path: The path can use OS specific separators (f.ex.: ``:``
-        on posix, ``;`` on windows) to specify multiple folders. These
-        folders will be searched in the specified order.
+    :param search_path: A list of paths to search for files.
     :param filename: The name of the file we search for.
     """
-    path = effective_path(config_id, search_path)
     config_filename = effective_filename(config_id, filename)
 
     # Next, use the resolved path to find the filenames. Keep track of
     # which files we loaded in order to inform the user.
-    for dirname in path:
+    for dirname in search_path:
         conf_name = join(dirname, config_filename)
         yield conf_name
 
