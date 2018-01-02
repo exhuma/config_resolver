@@ -1,8 +1,5 @@
 """
-config_resolver provides a ``Config`` class, which looks up common locations
-for config files and loads them if found. It provides a framework independed
-way of handling configuration files. Additional care has been taken to allow
-the end-user of the application to override this lookup process.
+Core functionality of :py:mod:`config_resolver`
 """
 
 import logging
@@ -33,7 +30,8 @@ FileReadability = namedtuple(
 
 def from_string(data, handler=None):
     '''
-    Load a config from a string variable.
+    Load a config from the string value in *data*. *handler* can be used to
+    specify a custom parser/handler.
     '''
     handler = handler or ini
     # TODO: This still does not do any version checking!
@@ -50,7 +48,42 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     '''
     Factory function to retrieve new config instances.
 
-    All arguments are currently passed on to either :py:class:`~.Config`.
+    *group_name* and *app_name* are used to determine the folder locations. We
+    always assume a structure like
+    ``<group_name>/<app_name>/<filename>.<extension>``.
+
+    *lookup_options* is a dictionary with the following optional keys:
+
+    **search_path** (default=``[]``)
+        A list of folders that should be searched for config files. The order
+        here is relevant. The folders will be searched in order, and each file
+        which is found will be loaded by the *handler*.
+
+    **filename** (default=``'app.ini'``)
+        The *basename* of the file which should be loaded (f.ex.: ``db.ini``)
+
+    **require_load** (default=``False``)
+        A boolean value which determines what happens if *no* file was loaded.
+        If this is set to ``True`` the call to ``get_config`` will raise an
+        exception if no file was found. Otherwise it will simply log a warning.
+
+    **version** (default=``None``)
+        This can be a string in the form ``<major>.<minor>``. If specified, the
+        lookup process will request a version number from the *handler* for each
+        file found. The version in the file will be compared with this value. If
+        the minor-number differs, the file will be loaded, but a warning will be
+        logged. If the major number differs, the file will be skipped and an
+        error will be logged. If the value is left unset, no version checking
+        will be performed.
+
+        How the version has to be stored in the config file depends on the
+        handler.
+
+    **secure** (default=``False``)
+        If set to ``True``, files which are world-readable will be ignored. The
+        idea here is nicked from the way SSH handles files with sensitive data.
+        It forces you to have secure file-access rights because the file will be
+        skipped if the rights are too open.
     '''
     handler = handler or ini
     config_id = ConfigID(group_name, app_name)
@@ -131,6 +164,9 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
 def prefixed_logger(config_id):
     '''
     Returns a log instance and prefix filter for a given group- & app-name pair.
+
+    The call to this function is cached to ensure we only have one instance in
+    memory.
     '''
     log = logging.getLogger('config_resolver.{}.{}'.format(
         config_id.group,
@@ -145,10 +181,12 @@ def prefixed_logger(config_id):
 def get_xdg_dirs(config_id):
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
-    variable or the appropriate default.
+    variable or the appropriate default. See :ref:`xdg-spec` for details.
 
     The list is sorted by precedence, with the most important item coming
     *last* (required by the existing config_resolver logic).
+
+    The value in *config_id* is used to determine the sub-folder structure.
     """
     log, _ = prefixed_logger(config_id)
     config_dirs = getenv('XDG_CONFIG_DIRS', '')
@@ -164,7 +202,7 @@ def get_xdg_dirs(config_id):
 def get_xdg_home(config_id):
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
-    or the appropriate default.
+    or the appropriate default. See :ref:`xdg-spec` for details.
     """
     log, _ = prefixed_logger(config_id)
     config_home = getenv('XDG_CONFIG_HOME', '')
@@ -179,6 +217,16 @@ def effective_path(config_id, search_path=''):
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
     settings from the first one.
+
+    The value in *config_id* determines the sub-folder structure.
+
+    If *search_path* is specified, that value should have the OS specific
+    path-separator (``:`` or ``;``). This will override the default path.
+    Subsequently the value of the environment variable
+    ``<GROUP_NAME>_<APP_NAME>_PATH`` will be inspected. If this value is set, it
+    will be used instead of anything found previously unless the value is
+    prefixed with a ``+`` sign. In that case it will be appended to the end of
+    the list.
     """
     log, _ = prefixed_logger(config_id)
 
@@ -237,6 +285,9 @@ def effective_filename(config_id, config_filename):
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
+
+    *config_id* is used to determine the name of the variable. If that does not
+    return a value, *config_filename* will be returned instead.
     """
     log, _ = prefixed_logger(config_id)
 
@@ -263,6 +314,11 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
+
+    :param filename: The exact filename which should be checked.
+    :param version: The expected version, that should be found in the file.
+    :param secure: Whether we should avoid loading insecure files or not.
+    :param handler: The handler to be used to open and parse the file.
     """
     log, _ = prefixed_logger(config_id)
     handler = handler or ini
