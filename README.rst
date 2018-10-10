@@ -4,7 +4,7 @@ config_resolver
 .. image:: https://travis-ci.org/exhuma/config_resolver.svg?branch=master
     :target: https://travis-ci.org/exhuma/config_resolver
 
-Fulll Documentation
+Full Documentation
     https://config-resolver.readthedocs.org/en/latest/
 
 Repository

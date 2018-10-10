@@ -1,13 +1,11 @@
 """
-config_resolver provides a ``Config`` class, which looks up common locations
-for config files and loads them if found. It provides a framework independed
-way of handling configuration files. Additional care has been taken to allow
-the end-user of the application to override this lookup process.
+Core functionality of :py:mod:`config_resolver`
 """
 
 import logging
 import stat
 from collections import namedtuple
+from functools import lru_cache
 from os import stat as get_stat
 from os import getcwd, getenv, pathsep
 from os.path import abspath, exists, expanduser, join
@@ -23,7 +21,8 @@ LookupResult = namedtuple('LookupResult', 'config meta')
 LookupMetadata = namedtuple('LookupMetadata', [
     'active_path',
     'loaded_files',
-    'config_id'
+    'config_id',
+    'prefix_filter'
 ])
 FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
@@ -31,7 +30,8 @@ FileReadability = namedtuple(
 
 def from_string(data, handler=None):
     '''
-    Load a config from a string variable.
+    Load a config from the string value in *data*. *handler* can be used to
+    specify a custom parser/handler.
     '''
     handler = handler or ini
     # TODO: This still does not do any version checking!
@@ -39,7 +39,8 @@ def from_string(data, handler=None):
     return LookupResult(new_config, LookupMetadata(
         '<unknown>',
         '<unknown>',
-        ConfigID('<unknown>', '<unknown>')
+        ConfigID('<unknown>', '<unknown>'),
+        None
     ))
 
 
@@ -47,11 +48,46 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
     '''
     Factory function to retrieve new config instances.
 
-    All arguments are currently passed on to either :py:class:`~.Config`.
+    *group_name* and *app_name* are used to determine the folder locations. We
+    always assume a structure like
+    ``<group_name>/<app_name>/<filename>.<extension>``.
+
+    *lookup_options* is a dictionary with the following optional keys:
+
+    **search_path** (default=``[]``)
+        A list of folders that should be searched for config files. The order
+        here is relevant. The folders will be searched in order, and each file
+        which is found will be loaded by the *handler*.
+
+    **filename** (default=``'app.ini'``)
+        The *basename* of the file which should be loaded (f.ex.: ``db.ini``)
+
+    **require_load** (default=``False``)
+        A boolean value which determines what happens if *no* file was loaded.
+        If this is set to ``True`` the call to ``get_config`` will raise an
+        exception if no file was found. Otherwise it will simply log a warning.
+
+    **version** (default=``None``)
+        This can be a string in the form ``<major>.<minor>``. If specified, the
+        lookup process will request a version number from the *handler* for each
+        file found. The version in the file will be compared with this value. If
+        the minor-number differs, the file will be loaded, but a warning will be
+        logged. If the major number differs, the file will be skipped and an
+        error will be logged. If the value is left unset, no version checking
+        will be performed.
+
+        How the version has to be stored in the config file depends on the
+        handler.
+
+    **secure** (default=``False``)
+        If set to ``True``, files which are world-readable will be ignored. The
+        idea here is nicked from the way SSH handles files with sensitive data.
+        It forces you to have secure file-access rights because the file will be
+        skipped if the rights are too open.
     '''
     handler = handler or ini
     config_id = ConfigID(group_name, app_name)
-    log = prefixed_logger(config_id)
+    log, prefix_filter = prefixed_logger(config_id)
 
     default_options = {
         'search_path': [],
@@ -76,8 +112,10 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
 
     loaded_files = []
 
+    search_path = effective_path(config_id, search_path)
+
     # Store the complete list of all inspected items
-    active_path = [join(_, filename) for _ in effective_path(config_id)]
+    active_path = [join(_, filename) for _ in search_path]
 
     output = handler.empty()
     found_files = find_files(config_id, search_path, filename)
@@ -109,21 +147,26 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
         log.warning(
             "No config file named %s found! Search path was %r",
             filename,
-            default_options['search_path'])
+            search_path)
     elif not loaded_files and require_load:
         raise IOError("No config file named %s found! Search path "
-                      "was %r" % (filename, default_options['search_path']))
+                      "was %r" % (filename, search_path))
 
     return LookupResult(output, LookupMetadata(
         active_path,
         loaded_files,
-        config_id
+        config_id,
+        prefix_filter
     ))
 
 
+@lru_cache(5)
 def prefixed_logger(config_id):
     '''
-    Returns a log instance for a given group- & app-name pair.
+    Returns a log instance and prefix filter for a given group- & app-name pair.
+
+    The call to this function is cached to ensure we only have one instance in
+    memory.
     '''
     log = logging.getLogger('config_resolver.{}.{}'.format(
         config_id.group,
@@ -132,18 +175,20 @@ def prefixed_logger(config_id):
         config_id.group, config_id.app), separator=':')
     if prefix_filter not in log.filters:
         log.addFilter(prefix_filter)
-    return log
+    return log, prefix_filter
 
 
 def get_xdg_dirs(config_id):
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
-    variable or the appropriate default.
+    variable or the appropriate default. See :ref:`xdg-spec` for details.
 
     The list is sorted by precedence, with the most important item coming
     *last* (required by the existing config_resolver logic).
+
+    The value in *config_id* is used to determine the sub-folder structure.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     config_dirs = getenv('XDG_CONFIG_DIRS', '')
     if config_dirs:
         log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
@@ -157,9 +202,9 @@ def get_xdg_dirs(config_id):
 def get_xdg_home(config_id):
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
-    or the appropriate default.
+    or the appropriate default. See :ref:`xdg-spec` for details.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     config_home = getenv('XDG_CONFIG_HOME', '')
     if config_home:
         log.debug('XDG_CONFIG_HOME is set to %r', config_home)
@@ -172,8 +217,18 @@ def effective_path(config_id, search_path=''):
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
     settings from the first one.
+
+    The value in *config_id* determines the sub-folder structure.
+
+    If *search_path* is specified, that value should have the OS specific
+    path-separator (``:`` or ``;``). This will override the default path.
+    Subsequently the value of the environment variable
+    ``<GROUP_NAME>_<APP_NAME>_PATH`` will be inspected. If this value is set, it
+    will be used instead of anything found previously unless the value is
+    prefixed with a ``+`` sign. In that case it will be appended to the end of
+    the list.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
 
     # default search path
     path = (['/etc/%s/%s' % (config_id.group, config_id.app)] +
@@ -214,17 +269,14 @@ def find_files(config_id, search_path=None, filename=None):
     Looks for files in default locations. Returns an iterator of filenames.
 
     :param config_id: A "ConfigID" object used to identify the config folder.
-    :param search_path: The path can use OS specific separators (f.ex.: ``:``
-        on posix, ``;`` on windows) to specify multiple folders. These
-        folders will be searched in the specified order.
+    :param search_path: A list of paths to search for files.
     :param filename: The name of the file we search for.
     """
-    path = effective_path(config_id, search_path)
     config_filename = effective_filename(config_id, filename)
 
     # Next, use the resolved path to find the filenames. Keep track of
     # which files we loaded in order to inform the user.
-    for dirname in path:
+    for dirname in search_path:
         conf_name = join(dirname, config_filename)
         yield conf_name
 
@@ -233,8 +285,11 @@ def effective_filename(config_id, config_filename):
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
+
+    *config_id* is used to determine the name of the variable. If that does not
+    return a value, *config_filename* will be returned instead.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
 
     env_filename = getenv(env_name(config_id))
     if env_filename:
@@ -259,8 +314,13 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
+
+    :param filename: The exact filename which should be checked.
+    :param version: The expected version, that should be found in the file.
+    :param secure: Whether we should avoid loading insecure files or not.
+    :param handler: The handler to be used to open and parse the file.
     """
-    log = prefixed_logger(config_id)
+    log, _ = prefixed_logger(config_id)
     handler = handler or ini
 
     if not exists(filename):

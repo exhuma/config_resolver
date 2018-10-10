@@ -10,6 +10,18 @@ import re
 __unittest = True  # Magic value to hide stack-traces in unit-test output
 
 
+def execute(filename):
+    '''
+    Execute the python module in *filename* and return the resulting globals.
+    '''
+    with open(filename) as fptr:
+        source = fptr.read()
+    ast = compile(source, filename, 'exec')
+    globals_ = {}
+    exec(ast, globals_)
+    return globals_
+
+
 @contextmanager
 def environment(**kwargs):
     """
