@@ -1,4 +1,6 @@
-from setuptools import setup, find_packages
+import sys
+
+from setuptools import find_packages, setup
 
 PACKAGE = "config_resolver"
 NAME = "config_resolver"
@@ -6,6 +8,10 @@ DESCRIPTION = "A small package to automatically find a configuration file."
 AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
 VERSION = __import__(PACKAGE).__version__
+
+DEPENDENCIES = []  # type: ignore
+if sys.version_info < (3, 0):
+    DEPENDENCIES.append('typing')
 
 setup(
     name=NAME,
@@ -17,7 +23,8 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
-    py_modules=['config_resolver'],
+    packages=['config_resolver'],
+    install_requires=DEPENDENCIES,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
