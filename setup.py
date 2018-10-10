@@ -25,6 +25,9 @@ setup(
     include_package_data=True,
     packages=['config_resolver'],
     install_requires=DEPENDENCIES,
+    package_data={
+        'config_resolver': ['py.typed'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
