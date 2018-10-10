@@ -1,12 +1,14 @@
-from contextlib import contextmanager
 import logging
 import os
 import re
 import stat
 import sys
 import unittest
-from os.path import expanduser, join, abspath
+from contextlib import contextmanager
+from os.path import abspath, expanduser, join
 from textwrap import dedent
+
+from config_resolver import Config, NoVersionError, SecuredConfig, get_config
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -23,11 +25,6 @@ except ImportError:
     except ImportError:
         have_mock = False
 
-from config_resolver import (
-    Config,
-    SecuredConfig,
-    NoVersionError,
-)
 
 
 @contextmanager
@@ -78,6 +75,7 @@ class TestableHandler(logging.Handler):
     def assert_contains_regex(self, logger, level, needle):
         if not self.contains(logger, level, needle, is_regex=True):
             msg = '%s did not contain a message matching %r and level %r'
+            level = logging.getLevelName(level)
             raise AssertionError(msg % (logger, needle, level))
 
     def contains(self, logger, level, message, is_regex=False):
@@ -506,6 +504,64 @@ class Regressions(TestBase):
         cfg = Config('foo', 'bar')
         self.assertEqual(len(cfg._log.filters), 1)
 
+
+class ConfigResolver5Transition(TestBase):
+    '''
+    To make upgrading to 5.0 easier, we will add a transition layer. This
+    test-case tests that the transition layer calls the old constructor
+    properly and emit appropriate deprecation warnings.
+
+    We can implement this easily as the main entry-point changes from
+    ``config_resolver.Config`` to ``config_resolver.get_config``.
+    '''
+
+    def test_ignore_handler(self):
+        '''
+        Version 5 will accept a new "handler" argument. This should be
+        accepted, but ignored in version 4.
+        '''
+        with patch('config_resolver.Config') as mck:
+            get_config('foo', 'bar', {}, handler='dummy_handler')
+            get_config('foo', 'bar', {}, 'dummy_handler')
+        mck.assert_called_with('bar', 'foo', filename='config.ini',
+                               search_path=None)
+
+    def test_search_path(self):
+        '''
+        ``search_path`` should be taken from ``lookup_options``
+        '''
+        with patch('config_resolver.Config') as mck:
+            get_config('world', 'hello', lookup_options={
+                'search_path': 'testdata:testdata/a:testdata/b'
+            })
+        mck.assert_called_with(
+            'hello', 'world',
+            filename='config.ini',
+            search_path='testdata:testdata/a:testdata/b')
+
+    def test_filename(self):
+        '''
+        ``filename`` should be taken from ``lookup_options``
+        '''
+        with patch('config_resolver.Config') as mck:
+            cfg_b = get_config('world', 'hello', lookup_options={
+                'filename': 'test.ini'
+            })
+        mck.assert_called_with('hello', 'world',
+            filename='test.ini',
+            search_path=None)
+
+    def test_new_default_filename(self):
+        '''
+        In config_resolver 5 we will switch to "config.ini" from "app.ini".
+
+        We want the transition-layer to continue working as usual
+        '''
+        with patch('config_resolver.Config') as mck:
+            cfg_b = get_config('world', 'hello')
+        mck.assert_called_with('hello', 'world',
+            filename='config.ini',
+            search_path=None)
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,12 +9,14 @@ try:
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
-from os import getenv, pathsep, getcwd, stat as get_stat
-from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 import sys
 from distutils.version import StrictVersion
+from os import stat as get_stat
+from os import getcwd, getenv, pathsep
+from os.path import abspath, exists, expanduser, join
+from warnings import warn
 
 __version__ = '4.2.4'
 
@@ -91,6 +93,56 @@ else:
         """
 
 
+def get_new_call(group_name, app_name, search_path, filename, require_load,
+                 version):
+    '''
+    Build a call to use the new ``get_config`` function from args passed to
+    ``Config.__init__``.
+    '''
+    new_call_kwargs = {
+        'group_name': group_name,
+        'filename': filename
+    }
+    new_call_lookup_options = {}
+    if search_path:
+        new_call_lookup_options['search_path'] = search_path
+    if require_load:
+        new_call_lookup_options['require_load'] = require_load
+    if version:
+        new_call_lookup_options['version'] = version
+    if new_call_lookup_options:
+        new_call_kwargs['lookup_options'] = new_call_lookup_options
+
+    output = build_call_str('get_config', (app_name,), new_call_kwargs)
+    return output
+
+
+def build_call_str(prefix, args, kwargs):
+    '''
+    Build a callable Python string for a function call. The output will be
+    combined similar to this template::
+
+        <prefix>(<args>, <kwargs>)
+
+    Example::
+
+        >>> build_call_str('foo', (1, 2), {'a': '10'})
+        "foo(1, 2, a='10')"
+    '''
+    kwargs_str = ', '.join(['%s=%r' % (key, value) for key, value in
+                            kwargs.items()])
+    args_str = ', '.join([repr(arg) for arg in args])
+    output = [prefix, '(']
+    if args:
+        output.append(args_str)
+    if args and kwargs:
+        output.append(', ')
+    if kwargs:
+        output.append(kwargs_str)
+    output.append(')')
+    return ''.join(output)
+
+
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
@@ -122,6 +174,17 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  **kwargs):
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
+
+        # Calling this constructor is deprecated and will disappear in version
+        # 5.0
+        new_call = get_new_call(group_name, app_name, search_path, filename,
+                                require_load, version)
+        warn('Using the "Config(...)" constructor will be deprecated in '
+             'version 5.0! Use "get_config(...)" instead. Your call should be '
+             'replaceable with: %r' % new_call, DeprecationWarning)
+
+        # --- end of deprecation check --------------------------------------
+
         self._log = logging.getLogger('{}.{}.{}'.format(__name__,
                                                         group_name,
                                                         app_name))
@@ -311,6 +374,16 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         """
         if "default" in kwargs:
             default = kwargs.pop("default")
+            new_kwargs = {
+                'fallback': default,
+                **kwargs
+            }
+            new_call = build_call_str('.get', (section, option), new_kwargs)
+            warn('Using the "default" argument to Config.get() will no longer '
+                 'work in config_resolver 5.0! Version 5 will return standard '
+                 'Python ConfigParser instances which use "fallback" instead '
+                 'of "default". Replace your code with "%s"' % new_call,
+                 DeprecationWarning)
             have_default = True
         else:
             have_default = False
@@ -407,3 +480,15 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
             self._log.warning(msg, filename)
             return False
         return True
+
+
+def get_config(app_name, group_name='', lookup_options=None, handler=None):
+    lookup_options = lookup_options or {}
+    kwargs = {
+        'search_path': lookup_options.get('search_path', None),
+        'filename': lookup_options.get('filename', 'config.ini'),
+    }
+    return Config(
+        group_name,
+        app_name,
+        **kwargs)
