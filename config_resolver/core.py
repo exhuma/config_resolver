@@ -9,68 +9,20 @@ try:
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
-from os import getenv, pathsep, getcwd, stat as get_stat
-from os.path import expanduser, exists, join, abspath
 import logging
 import stat
 import sys
 from distutils.version import StrictVersion
+from os import stat as get_stat
+from os import getcwd, getenv, pathsep
+from os.path import abspath, exists, expanduser, join
+from typing import Any, Dict, List, Optional
+from warnings import warn
 
-__version__ = '4.2.4'
+from .exc import NoVersionError
+from .util import PrefixFilter
 
-
-class PrefixFilter(object):
-    """
-    A logging filter which prefixes each message with a given text.
-
-    :param prefix: The log prefix.
-    :param separator: A string to put between the prefix and the original log
-                      message.
-    """
-    # pylint: disable = too-few-public-methods
-
-    def __init__(self, prefix, separator=' '):
-        self._prefix = prefix
-        self._separator = separator
-
-    def __eq__(self, other):
-        # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
-        # when running the unit-tests through ``sniffer``. Does this have
-        # something to do with ``sniffer`` or is there something wrong with the
-        # code of ``config_resolver``? This is a workaround which is incorrect,
-        # and could in extreme cases cause problems if there was another
-        # filter with the exact same class name and with a ``_prefix`` and
-        # ``_separator`` member. They would wrongly be assumed to be the same.
-        # I'll assume this won't happen for now.
-        # pylint: disable = protected-access
-        return (self.__class__.__name__ == other.__class__.__name__ and
-                other._prefix == self._prefix and
-                other._separator == self._separator)
-
-    def __repr__(self):
-        return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
-            self._prefix, self._separator)
-
-    def filter(self, record):
-        # pylint: disable = missing-docstring
-        record.msg = self._separator.join([self._prefix, record.msg])
-        return True
-
-
-class IncompatibleVersion(Exception):
-    """
-    This exception is raised if a config file is loaded which has a different
-    major version number than expected by the application.
-    """
-    pass
-
-
-class NoVersionError(Exception):
-    """
-    This exception is raised if the application expects a version number to be
-    present in the config file but does not find one.
-    """
-    pass
+__version__ = '4.2.5'
 
 
 if sys.hexversion < 0x030000F0:
@@ -89,6 +41,58 @@ else:
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
+
+
+def get_new_call(group_name, app_name, search_path, filename, require_load,
+                 version):
+    # type: (str, str, Optional[str], str, bool, Optional[str]) -> str
+    '''
+    Build a call to use the new ``get_config`` function from args passed to
+    ``Config.__init__``.
+    '''
+    new_call_kwargs = {
+        'group_name': group_name,
+        'filename': filename
+    }  # type: Dict[str, Any]
+    new_call_lookup_options = {}  # type: Dict[str, Any]
+    if search_path:
+        new_call_lookup_options['search_path'] = search_path
+    if require_load:
+        new_call_lookup_options['require_load'] = require_load
+    if version:
+        new_call_lookup_options['version'] = version
+    if new_call_lookup_options:
+        new_call_kwargs['lookup_options'] = new_call_lookup_options
+
+    output = build_call_str('get_config', (app_name,), new_call_kwargs)
+    return output
+
+
+def build_call_str(prefix, args, kwargs):
+    # type: (str, Any, Any) -> str
+    '''
+    Build a callable Python string for a function call. The output will be
+    combined similar to this template::
+
+        <prefix>(<args>, <kwargs>)
+
+    Example::
+
+        >>> build_call_str('foo', (1, 2), {'a': '10'})
+        "foo(1, 2, a='10')"
+    '''
+    kwargs_str = ', '.join(['%s=%r' % (key, value) for key, value in
+                            kwargs.items()])
+    args_str = ', '.join([repr(arg) for arg in args])
+    output = [prefix, '(']
+    if args:
+        output.append(args_str)
+    if args and kwargs:
+        output.append(', ')
+    if kwargs:
+        output.append(kwargs_str)
+    output.append(')')
+    return ''.join(output)
 
 
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
@@ -120,9 +124,21 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
+        # type: (str, str, Optional[str], str, bool, Optional[str], Any) -> None
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
-        self._log = logging.getLogger('{}.{}.{}'.format(__name__,
+
+        # Calling this constructor is deprecated and will disappear in version
+        # 5.0
+        new_call = get_new_call(group_name, app_name, search_path, filename,
+                                require_load, version)
+        warn('Using the "Config(...)" constructor will be deprecated in '
+             'version 5.0! Use "get_config(...)" instead. Your call should be '
+             'replaceable with: %r' % new_call, DeprecationWarning)
+
+        # --- end of deprecation check --------------------------------------
+
+        self._log = logging.getLogger('{}.{}.{}'.format('config_resolver',
                                                         group_name,
                                                         app_name))
         self._prefix_filter = PrefixFilter('group={}:app={}'.format(
@@ -136,8 +152,8 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         self.app_name = app_name
         self.search_path = search_path
         self.filename = filename
-        self.loaded_files = []
-        self.active_path = []
+        self.loaded_files = []  # type: List[str]
+        self.active_path = []  # type: List[str]
         self.env_path_name = "%s_%s_PATH" % (
             self.group_name.upper(),
             self.app_name.upper())
@@ -147,6 +163,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         self.load(require_load=require_load)
 
     def get_xdg_dirs(self):
+        # type: () -> List[str]
         """
         Returns a list of paths specified by the XDG_CONFIG_DIRS environment
         variable or the appropriate default.
@@ -164,6 +181,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
 
     def get_xdg_home(self):
+        # type: () -> str
         """
         Returns the value specified in the XDG_CONFIG_HOME environment variable
         or the appropriate default.
@@ -175,6 +193,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return expanduser('~/.config/%s/%s' % (self.group_name, self.app_name))
 
     def _effective_filename(self):
+        # type: () -> Optional[str]
         """
         Returns the filename which is effectively used by the application. If
         overridden by an environment variable, it will return that filename.
@@ -197,6 +216,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return config_filename
 
     def _effective_path(self):
+        # type: () -> List[str]
         """
         Returns a list of paths to search for config files in reverse order of
         precedence.  In other words: the last path element will override the
@@ -235,6 +255,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return path
 
     def check_file(self, filename):
+        # type: (str) -> bool
         """
         Check if ``filename`` can be read. Will return boolean which is True if
         the file can be read, False otherwise.
@@ -286,6 +307,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return True
 
     def get(self, section, option, **kwargs):
+        # type: (str, str, Any) -> Any
         """
         Overrides :py:meth:`configparser.ConfigParser.get`.
 
@@ -311,6 +333,14 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         """
         if "default" in kwargs:
             default = kwargs.pop("default")
+            new_kwargs = {'fallback': default}
+            new_kwargs.update(kwargs)
+            new_call = build_call_str('.get', (section, option), new_kwargs)
+            warn('Using the "default" argument to Config.get() will no longer '
+                 'work in config_resolver 5.0! Version 5 will return standard '
+                 'Python ConfigParser instances which use "fallback" instead '
+                 'of "default". Replace your code with "%s"' % new_call,
+                 DeprecationWarning)
             have_default = True
         else:
             have_default = False
@@ -326,6 +356,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                 raise
 
     def load(self, reload=False, require_load=False):
+        # type: (bool, bool) -> None
         """
         Searches for an appropriate config file. If found, loads the file into
         the current instance. This method can also be used to reload a
@@ -394,6 +425,7 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
     """
 
     def check_file(self, filename):
+        # type: (str) -> bool
         """
         Overrides :py:meth:`.Config.check_file`
         """
@@ -407,3 +439,16 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
             self._log.warning(msg, filename)
             return False
         return True
+
+
+def get_config(app_name, group_name='', lookup_options=None, handler=None):
+    # type: (str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+    lookup_options = lookup_options or {}
+    kwargs = {
+        'search_path': lookup_options.get('search_path', None),
+        'filename': lookup_options.get('filename', 'config.ini'),
+    }
+    return Config(
+        group_name,
+        app_name,
+        **kwargs)
