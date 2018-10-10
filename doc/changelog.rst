@@ -47,7 +47,7 @@ Release 4.2.5
 Fixes
 ~~~~~
 
-* Change from a modul-only distrbution to a package (for PEP-561)
+* Change from a module-only distrbution to a package (for PEP-561)
 * Make package PEP-561 compliant
 * Add transition function ``config_resolver.get_config`` for a smoother upgrade
   to v5.0 in the future.

@@ -19,6 +19,9 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
+    packages=['config_resolver'],
+    install_requires=DEPENDENCIES,
+    requires=DEPENDENCIES,
     package_data={
         'config_resolver': ['py.typed'],
     },
