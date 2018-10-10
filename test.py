@@ -72,6 +72,7 @@ class TestableHandler(logging.Handler):
     def assert_contains(self, logger, level, needle):
         if not self.contains(logger, level, needle):
             msg = '%s did not contain a message with %r and level %r'
+            level = logging.getLevelName(level)
             raise AssertionError(msg % (logger, needle, level))
 
     def assert_contains_regex(self, logger, level, needle):
