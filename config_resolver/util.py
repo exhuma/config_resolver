@@ -5,8 +5,10 @@ This module contains stuff which is not directly impacting the business logic of
 the config_resolver package.
 """
 
+from logging import Filter
 
-class PrefixFilter(object):
+
+class PrefixFilter(Filter):
     """
     A logging filter which prefixes each message with a given text.
 
@@ -16,7 +18,7 @@ class PrefixFilter(object):
     """
     # pylint: disable = too-few-public-methods
 
-    def __init__(self, prefix, separator=' '):
+    def __init__(self, prefix: str, separator: str = ' ') -> None:
         self._prefix = prefix
         self._separator = separator
 
