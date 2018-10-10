@@ -102,13 +102,34 @@ class TestableHandler(logging.Handler):
         return False
 
 
+class TestBase(unittest.TestCase):
+    '''
+    A superclass for tests to make use of the TestableHandler class in each
+    test.
+
+    This would be easier using the pytest caplog fixture, but this would entail
+    too many code changes and conflicts down the line.
+    '''
+
+    def setUp(self):
+        logger = logging.getLogger('config_resolver')
+        logger.setLevel(logging.DEBUG)
+        self.catcher = TestableHandler()
+        logger.addHandler(self.catcher)
+        def remove_handler():
+            logger.removeHandler(self.catcher)
+        self.addCleanup(remove_handler)
+
+
+
 @unittest.skipUnless(sys.version_info > (3, 0), 'Test only valid in Python 2')
-class SimpleInitFromContent(unittest.TestCase):
+class SimpleInitFromContent(TestBase):
     '''
     Tests loading a config string from memory
     '''
 
     def setUp(self):
+        super(SimpleInitFromContent, self).setUp()
         self.cfg = Config('not', 'existing', search_path='testdata')
         self.cfg.read_string(dedent(
             '''\
@@ -124,9 +145,10 @@ class SimpleInitFromContent(unittest.TestCase):
         self.assertEqual(self.cfg.get('section_mem', 'val'), '1')
 
 
-class SimpleInitTest(unittest.TestCase):
+class SimpleInitTest(TestBase):
 
     def setUp(self):
+        super(SimpleInitTest, self).setUp()
         self.cfg = Config('hello', 'world', search_path='testdata')
 
     def test_simple_init(self):
@@ -144,7 +166,7 @@ class SimpleInitTest(unittest.TestCase):
         self.assertIs(self.cfg.get('a', 'b', default=None), None)
 
 
-class AdvancedInitTest(unittest.TestCase):
+class AdvancedInitTest(TestBase):
 
     def tearDown(self):
         os.environ.pop('HELLO_WORLD_PATH', None)
@@ -166,14 +188,10 @@ class AdvancedInitTest(unittest.TestCase):
 
     def test_env_name_override(self):
         os.environ['HELLO_WORLD_FILENAME'] = 'test.ini'
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world')
         msg = ("filename was overridden with 'test.ini' by the environment "
                "variable HELLO_WORLD_FILENAME")
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
@@ -189,15 +207,11 @@ class AdvancedInitTest(unittest.TestCase):
             expected)
 
     def test_env_path_override_log(self):
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = 'testdata:testdata/a:testdata/b'
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world')
         msg = ("overridden with 'testdata:testdata/a:testdata/b' by the "
                "environment variable 'HELLO_WORLD_PATH'")
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
@@ -219,15 +233,11 @@ class AdvancedInitTest(unittest.TestCase):
             expected)
 
     def test_env_path_add_log(self):
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
         os.environ['HELLO_WORLD_PATH'] = '+testdata:testdata/a:testdata/b'
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world')
         msg = ("extended with ['testdata', 'testdata/a', 'testdata/b'] by the "
                "environment variable HELLO_WORLD_PATH")
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.INFO,
             msg)
@@ -252,7 +262,7 @@ class AdvancedInitTest(unittest.TestCase):
         self.assertEqual(cfg.app_name, 'world')
 
 
-class FunctionalityTests(unittest.TestCase):
+class FunctionalityTests(TestBase):
 
     def test_mandatory_section(self):
         config = Config('hello', 'world', search_path='testdata')
@@ -265,16 +275,12 @@ class FunctionalityTests(unittest.TestCase):
             config.get('section1', 'nosuchoption')
 
     def test_unsecured_logmessage(self):
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         SecuredConfig('hello', 'world', filename='test.ini',
                       search_path='testdata')
         expected_message = (
             "File 'testdata/test.ini' is not secure enough. "
             "Change it's mode to 600")
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             expected_message)
@@ -314,22 +320,17 @@ class FunctionalityTests(unittest.TestCase):
             Config('hello', 'world', search_path='testdata', version='1.1')
 
     def test_mismatching_major(self):
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
-
         config = Config('hello', 'world', search_path='testdata/versioned',
                         version='1.1')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             'Invalid major version number')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             '2.1')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             '1.1')
@@ -342,21 +343,17 @@ class FunctionalityTests(unittest.TestCase):
         self.assertEqual(config.loaded_files, [])
 
     def test_mismatching_minor(self):
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
                version='2.0')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             'Mismatching minor version number')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             '2.1')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
             '2.0')
@@ -368,22 +365,18 @@ class FunctionalityTests(unittest.TestCase):
         files even if the application did not explicitly request a version
         number!
         """
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world',
                filename='mismatch.ini',
                search_path='testdata/versioned:testdata/versioned2')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             'Invalid major version number')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             '1.0')
-        catcher.assert_contains(
+        self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.ERROR,
             '2.0')
@@ -460,10 +453,6 @@ class FunctionalityTests(unittest.TestCase):
         """
         with patch('config_resolver.Config.check_file') as checker_mock:
             checker_mock.return_value = (True, "")
-            logger = logging.getLogger('config_resolver')
-            logger.setLevel(logging.DEBUG)
-            catcher = TestableHandler()
-            logger.addHandler(catcher)
             Config('hello', 'world')
             expected_message = (
                 "DEPRECATION WARNING: The file '{home}/.hello/world/app.ini' "
@@ -473,7 +462,7 @@ class FunctionalityTests(unittest.TestCase):
                 "config_resolver! You can already (and should) move the "
                 "file!".format(
                     home=expanduser("~")))
-            catcher.assert_contains(
+            self.catcher.assert_contains(
                 'config_resolver.hello.world',
                 logging.WARNING,
                 expected_message)
@@ -482,13 +471,9 @@ class FunctionalityTests(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
                version='2.0')
-        catcher.assert_contains_regex(
+        self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.WARNING,
             'testdata/versioned/app.ini')
@@ -497,21 +482,18 @@ class FunctionalityTests(unittest.TestCase):
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        logger = logging.getLogger('config_resolver')
-        logger.setLevel(logging.DEBUG)
-        catcher = TestableHandler()
-        logger.addHandler(catcher)
         Config('hello', 'world', search_path='testdata/versioned',
                version='5.0')
-        catcher.assert_contains_regex(
+        self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
             'testdata/versioned/app.ini')
 
 
-class Regressions(unittest.TestCase):
+class Regressions(TestBase):
 
     def setUp(self):
+        super(Regressions, self).setUp()
         self.cfg = Config('hello', 'world', search_path='testdata')
 
     def test_multiple_log_prefixes(self):
