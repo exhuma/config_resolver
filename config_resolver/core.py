@@ -333,10 +333,8 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         """
         if "default" in kwargs:
             default = kwargs.pop("default")
-            new_kwargs = {
-                'fallback': default,
-                **kwargs
-            }
+            new_kwargs = {'fallback': default}
+            new_kwargs.update(kwargs)
             new_call = build_call_str('.get', (section, option), new_kwargs)
             warn('Using the "default" argument to Config.get() will no longer '
                  'work in config_resolver 5.0! Version 5 will return standard '
