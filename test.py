@@ -450,7 +450,7 @@ class FunctionalityTests(TestBase):
         NOTE: This is a *user* warning. Not a developer warning! So we'll use
         the logging module instead of the warnings module!
         """
-        with patch('config_resolver.Config.check_file') as checker_mock:
+        with patch('config_resolver.core.Config.check_file') as checker_mock:
             checker_mock.return_value = (True, "")
             Config('hello', 'world')
             expected_message = (
@@ -520,7 +520,7 @@ class ConfigResolver5Transition(TestBase):
         Version 5 will accept a new "handler" argument. This should be
         accepted, but ignored in version 4.
         '''
-        with patch('config_resolver.Config') as mck:
+        with patch('config_resolver.core.Config') as mck:
             get_config('foo', 'bar', {}, handler='dummy_handler')
             get_config('foo', 'bar', {}, 'dummy_handler')
         mck.assert_called_with('bar', 'foo', filename='config.ini',
@@ -530,7 +530,7 @@ class ConfigResolver5Transition(TestBase):
         '''
         ``search_path`` should be taken from ``lookup_options``
         '''
-        with patch('config_resolver.Config') as mck:
+        with patch('config_resolver.core.Config') as mck:
             get_config('world', 'hello', lookup_options={
                 'search_path': 'testdata:testdata/a:testdata/b'
             })
@@ -543,7 +543,7 @@ class ConfigResolver5Transition(TestBase):
         '''
         ``filename`` should be taken from ``lookup_options``
         '''
-        with patch('config_resolver.Config') as mck:
+        with patch('config_resolver.core.Config') as mck:
             cfg_b = get_config('world', 'hello', lookup_options={
                 'filename': 'test.ini'
             })
@@ -557,7 +557,7 @@ class ConfigResolver5Transition(TestBase):
 
         We want the transition-layer to continue working as usual
         '''
-        with patch('config_resolver.Config') as mck:
+        with patch('config_resolver.core.Config') as mck:
             cfg_b = get_config('world', 'hello')
         mck.assert_called_with('hello', 'world',
             filename='config.ini',

@@ -18,6 +18,8 @@ from os import getcwd, getenv, pathsep
 from os.path import abspath, exists, expanduser, join
 from warnings import warn
 
+from .exc import IncompatibleVersion, NoVersionError
+
 __version__ = '4.2.4'
 
 
@@ -57,22 +59,6 @@ class PrefixFilter(object):
         # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True
-
-
-class IncompatibleVersion(Exception):
-    """
-    This exception is raised if a config file is loaded which has a different
-    major version number than expected by the application.
-    """
-    pass
-
-
-class NoVersionError(Exception):
-    """
-    This exception is raised if the application expects a version number to be
-    present in the config file but does not find one.
-    """
-    pass
 
 
 if sys.hexversion < 0x030000F0:
@@ -185,7 +171,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # --- end of deprecation check --------------------------------------
 
-        self._log = logging.getLogger('{}.{}.{}'.format(__name__,
+        self._log = logging.getLogger('{}.{}.{}'.format('config_resolver',
                                                         group_name,
                                                         app_name))
         self._prefix_filter = PrefixFilter('group={}:app={}'.format(
