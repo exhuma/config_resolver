@@ -5,7 +5,6 @@ attrs==18.2.0
 Babel==2.6.0
 certifi==2018.8.24
 chardet==3.0.4
--e git+ssh://git@github.com/exhuma/config_resolver@3568e244600e77494cd002137b9376e87fd8ce63#egg=config_resolver
 docutils==0.14
 execnet==1.5.0
 idna==2.7
