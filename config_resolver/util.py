@@ -1,4 +1,7 @@
-class PrefixFilter(object):
+from logging import Filter
+
+
+class PrefixFilter(Filter):
     """
     A logging filter which prefixes each message with a given text.
 
@@ -9,6 +12,7 @@ class PrefixFilter(object):
     # pylint: disable = too-few-public-methods
 
     def __init__(self, prefix, separator=' '):
+        # type: (str, str) -> None
         self._prefix = prefix
         self._separator = separator
 

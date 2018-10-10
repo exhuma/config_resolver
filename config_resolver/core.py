@@ -16,9 +16,10 @@ from distutils.version import StrictVersion
 from os import stat as get_stat
 from os import getcwd, getenv, pathsep
 from os.path import abspath, exists, expanduser, join
+from typing import Any, Dict, List, Optional
 from warnings import warn
 
-from .exc import IncompatibleVersion, NoVersionError
+from .exc import NoVersionError
 from .util import PrefixFilter
 
 __version__ = '4.2.4'
@@ -44,6 +45,7 @@ else:
 
 def get_new_call(group_name, app_name, search_path, filename, require_load,
                  version):
+    # type: (str, str, Optional[str], str, bool, Optional[str]) -> str
     '''
     Build a call to use the new ``get_config`` function from args passed to
     ``Config.__init__``.
@@ -51,8 +53,8 @@ def get_new_call(group_name, app_name, search_path, filename, require_load,
     new_call_kwargs = {
         'group_name': group_name,
         'filename': filename
-    }
-    new_call_lookup_options = {}
+    }  # type: Dict[str, Any]
+    new_call_lookup_options = {}  # type: Dict[str, Any]
     if search_path:
         new_call_lookup_options['search_path'] = search_path
     if require_load:
@@ -67,6 +69,7 @@ def get_new_call(group_name, app_name, search_path, filename, require_load,
 
 
 def build_call_str(prefix, args, kwargs):
+    # type: (str, Any, Any) -> str
     '''
     Build a callable Python string for a function call. The output will be
     combined similar to this template::
@@ -121,6 +124,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     def __init__(self, group_name, app_name, search_path=None,
                  filename='app.ini', require_load=False, version=None,
                  **kwargs):
+        # type: (str, str, Optional[str], str, bool, Optional[str], Any) -> None
         # pylint: disable = too-many-arguments
         super(Config, self).__init__(**kwargs)
 
@@ -148,8 +152,8 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         self.app_name = app_name
         self.search_path = search_path
         self.filename = filename
-        self.loaded_files = []
-        self.active_path = []
+        self.loaded_files = []  # type: List[str]
+        self.active_path = []  # type: List[str]
         self.env_path_name = "%s_%s_PATH" % (
             self.group_name.upper(),
             self.app_name.upper())
@@ -159,6 +163,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         self.load(require_load=require_load)
 
     def get_xdg_dirs(self):
+        # type: () -> List[str]
         """
         Returns a list of paths specified by the XDG_CONFIG_DIRS environment
         variable or the appropriate default.
@@ -176,6 +181,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return ['/etc/xdg/%s/%s' % (self.group_name, self.app_name)]
 
     def get_xdg_home(self):
+        # type: () -> str
         """
         Returns the value specified in the XDG_CONFIG_HOME environment variable
         or the appropriate default.
@@ -187,6 +193,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return expanduser('~/.config/%s/%s' % (self.group_name, self.app_name))
 
     def _effective_filename(self):
+        # type: () -> Optional[str]
         """
         Returns the filename which is effectively used by the application. If
         overridden by an environment variable, it will return that filename.
@@ -209,6 +216,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return config_filename
 
     def _effective_path(self):
+        # type: () -> List[str]
         """
         Returns a list of paths to search for config files in reverse order of
         precedence.  In other words: the last path element will override the
@@ -247,6 +255,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return path
 
     def check_file(self, filename):
+        # type: (str) -> bool
         """
         Check if ``filename`` can be read. Will return boolean which is True if
         the file can be read, False otherwise.
@@ -298,6 +307,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return True
 
     def get(self, section, option, **kwargs):
+        # type: (str, str, Any) -> Any
         """
         Overrides :py:meth:`configparser.ConfigParser.get`.
 
@@ -348,6 +358,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                 raise
 
     def load(self, reload=False, require_load=False):
+        # type: (bool, bool) -> None
         """
         Searches for an appropriate config file. If found, loads the file into
         the current instance. This method can also be used to reload a
@@ -416,6 +427,7 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
     """
 
     def check_file(self, filename):
+        # type: (str) -> bool
         """
         Overrides :py:meth:`.Config.check_file`
         """
@@ -432,6 +444,7 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
 
 
 def get_config(app_name, group_name='', lookup_options=None, handler=None):
+    # type: (str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
     lookup_options = lookup_options or {}
     kwargs = {
         'search_path': lookup_options.get('search_path', None),
