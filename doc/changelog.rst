@@ -41,6 +41,61 @@ Upgrading from 4.x
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 
+Release 4.2.5
+-------------
+
+Fixes
+~~~~~
+
+* Change from a modul-only distrbution to a package (for PEP-561)
+* Make package PEP-561 compliant
+* Add transition function ``config_resolver.get_config`` for a smoother upgrade
+  to v5.0 in the future.
+* Add deprecation warnings with details on how to change the code for a smooth
+  transition to v5.0
+
+
+Release 4.2.4
+-------------
+
+Fixes
+~~~~~
+
+* Improve code quality.
+* Improve log message for invalid config version numbers.
+
+
+Release 4.2.3
+-------------
+
+Fixes
+~~~~~
+
+* Unit tests fixed
+* Added missing LICENSE file
+* Log messages will now show the complete version string
+* Auto-detect version number if none is specifiec in the ``[meta]`` section.
+* Fix travis CI pipeline
+
+
+Release 4.2.2
+-------------
+
+Fixes
+~~~~~
+
+* Python 2/3 class-inheritance fixed.
+
+
+Release 4.2.1
+-------------
+
+Fixes
+~~~~~
+
+* Log message prefixes no longer added multiple times
+
+
 Release 4.2.0
 -------------
 
@@ -48,6 +103,13 @@ Features added
 ~~~~~~~~~~~~~~
 
 * GROUP and APP names are now included in the log messages.
+
+
+Fixes
+~~~~~
+
+* Python 2/3 Unicode fix in log records
+
 
 Release 4.1.0
 -------------
