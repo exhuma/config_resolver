@@ -5,7 +5,7 @@ python:
   - "3.6"
   - "3.6-dev" # 3.6 development branch
   - "nightly" # currently points to 3.6-dev
-install: "pip install -r travis-requirements.txt"
+install: "pip install -r travis-requirements.txt && pip install -e ."
 before_script:
   - chmod 600 tests/examples/configs/secure.ini
 script: "pytest tests"
