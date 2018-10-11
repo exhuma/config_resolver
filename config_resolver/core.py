@@ -459,13 +459,21 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
         return True
 
 
-def get_config(app_name, group_name='', lookup_options=None, handler=None):
-    # type: (str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+def get_config(app_name, group_name='', filename='',
+               lookup_options=None, handler=None):
+    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
     lookup_options = lookup_options or {}
     kwargs = {
         'search_path': lookup_options.get('search_path', None),
-        'filename': lookup_options.get('filename', 'config.ini'),
+        'filename': filename or lookup_options.get('filename') or 'config.ini',
     }
+    if 'filename' in lookup_options:
+        warn_origin = get_previous_location()
+        warn('At %r: "filename" should be passed as direct argument to '
+             'get_config instead of passing it in '
+             '"lookup_options"!)' % warn_origin,
+             DeprecationWarning)
+
     return Config(
         group_name,
         app_name,
