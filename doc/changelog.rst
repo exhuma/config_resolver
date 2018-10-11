@@ -1,3 +1,12 @@
+Release 4.2.5.post1
+-------------------
+
+Fixes
+~~~~~
+
+* Improved warning detail in deprecation messages.
+
+
 Release 4.2.5
 -------------
 
