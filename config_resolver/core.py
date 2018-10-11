@@ -22,7 +22,7 @@ from warnings import warn
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-__version__ = '4.2.5'
+__version__ = '4.2.5.post1'
 
 
 if sys.hexversion < 0x030000F0:
