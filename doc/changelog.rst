@@ -42,6 +42,15 @@ Upgrading from 4.x
   keyword argument to ``get`` has been replaced with ``fallback``.
 
 
+Release 4.2.5.post2
+-------------------
+
+Fixes
+~~~~~
+
+* ``filename`` can now be passed as direct argument to ``get_config``
+
+
 Release 4.2.5.post1
 -------------------
 
