@@ -41,6 +41,16 @@ Upgrading from 4.x
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 
+
+Release 4.2.5.post1
+-------------------
+
+Fixes
+~~~~~
+
+* Improved warning detail in deprecation messages.
+
+
 Release 4.2.5
 -------------
 
