@@ -1,3 +1,12 @@
+Release 4.2.5.post2
+-------------------
+
+Fixes
+~~~~~
+
+* ``filename`` can now be passed as direct argument to ``get_config``
+* Don't warn if the config is retrieved correctly
+
 Release 4.2.5.post1
 -------------------
 

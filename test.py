@@ -521,8 +521,8 @@ class ConfigResolver5Transition(TestBase):
         accepted, but ignored in version 4.
         '''
         with patch('config_resolver.core.Config') as mck:
-            get_config('foo', 'bar', {}, handler='dummy_handler')
-            get_config('foo', 'bar', {}, 'dummy_handler')
+            get_config('foo', 'bar', lookup_options={}, handler='dummy_handler')
+            get_config('foo', 'bar', lookup_options={}, handler='dummy_handler')
         mck.assert_called_with('bar', 'foo', filename='config.ini',
                                search_path=None)
 
@@ -544,9 +544,16 @@ class ConfigResolver5Transition(TestBase):
         ``filename`` should be taken from ``lookup_options``
         '''
         with patch('config_resolver.core.Config') as mck:
+            cfg_b = get_config('world', 'hello', filename='test.ini')
+        mck.assert_called_with('hello', 'world',
+            filename='test.ini',
+            search_path=None)
+
+        with patch('config_resolver.core.Config') as mck:
             cfg_b = get_config('world', 'hello', lookup_options={
                 'filename': 'test.ini'
             })
+
         mck.assert_called_with('hello', 'world',
             filename='test.ini',
             search_path=None)

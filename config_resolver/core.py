@@ -95,15 +95,19 @@ def build_call_str(prefix, args, kwargs):
     return ''.join(output)
 
 
-def get_previous_location():
+def get_warn_location():
     # type: () -> str
     '''
     Gets the location where the function was called or "<unknown>" if it was
     unable to get the location.
+
+    If this returns an empty string, we assume the warning can be ignored.
     '''
     try:
         from inspect import stack
         frame = stack()[2]
+        if (frame.filename, frame.function) == (__file__, 'get_config'):
+            return ''
         output = '{0.filename} at line {0.lineno}'.format(frame)
     except:  # pylint: disable=bare-except
         output = '<unknown>'
@@ -147,11 +151,13 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         # 5.0
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version)
-        warn_origin = get_previous_location()
-        warn('At %r: Using the "Config(...)" constructor will be deprecated '
-             'in version 5.0! Use "get_config(...)" instead. Your call should '
-             'be replaceable with: %r' % (warn_origin, new_call),
-             DeprecationWarning)
+        warn_origin = get_warn_location()
+        if warn_origin:
+            warn('At %r: Using the "Config(...)" constructor will be '
+                 'deprecated in version 5.0! Use "get_config(...)" instead. '
+                 'Your call should be replaceable with: %r' % (
+                     warn_origin, new_call),
+                DeprecationWarning)
 
         # --- end of deprecation check --------------------------------------
 
@@ -353,7 +359,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
             new_kwargs = {'fallback': default}
             new_kwargs.update(kwargs)
             new_call = build_call_str('.get', (section, option), new_kwargs)
-            warn_origin = get_previous_location()
+            warn_origin = get_warn_location()
             warn('At %r: Using the "default" argument to Config.get() will no '
                  'longer work in config_resolver 5.0! Version 5 will return '
                  'standard Python ConfigParser instances which use "fallback" '
@@ -459,13 +465,21 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
         return True
 
 
-def get_config(app_name, group_name='', lookup_options=None, handler=None):
-    # type: (str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+def get_config(app_name, group_name='', filename='',
+               lookup_options=None, handler=None):
+    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
     lookup_options = lookup_options or {}
     kwargs = {
         'search_path': lookup_options.get('search_path', None),
-        'filename': lookup_options.get('filename', 'config.ini'),
+        'filename': filename or lookup_options.get('filename') or 'config.ini',
     }
+    if 'filename' in lookup_options:
+        warn_origin = get_warn_location()
+        warn('At %r: "filename" should be passed as direct argument to '
+             'get_config instead of passing it in '
+             '"lookup_options"!)' % warn_origin,
+             DeprecationWarning)
+
     return Config(
         group_name,
         app_name,
