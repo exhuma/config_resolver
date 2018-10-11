@@ -95,6 +95,21 @@ def build_call_str(prefix, args, kwargs):
     return ''.join(output)
 
 
+def get_previous_location():
+    # type: () -> str
+    '''
+    Gets the location where the function was called or "<unknown>" if it was
+    unable to get the location.
+    '''
+    try:
+        from inspect import stack
+        frame = stack()[2]
+        output = '{0.filename} at line {0.lineno}'.format(frame)
+    except:  # pylint: disable=bare-except
+        output = '<unknown>'
+    return output
+
+
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
@@ -132,9 +147,11 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         # 5.0
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version)
-        warn('Using the "Config(...)" constructor will be deprecated in '
-             'version 5.0! Use "get_config(...)" instead. Your call should be '
-             'replaceable with: %r' % new_call, DeprecationWarning)
+        warn_origin = get_previous_location()
+        warn('At %r: Using the "Config(...)" constructor will be deprecated '
+             'in version 5.0! Use "get_config(...)" instead. Your call should '
+             'be replaceable with: %r' % (warn_origin, new_call),
+             DeprecationWarning)
 
         # --- end of deprecation check --------------------------------------
 
@@ -336,11 +353,12 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
             new_kwargs = {'fallback': default}
             new_kwargs.update(kwargs)
             new_call = build_call_str('.get', (section, option), new_kwargs)
-            warn('Using the "default" argument to Config.get() will no longer '
-                 'work in config_resolver 5.0! Version 5 will return standard '
-                 'Python ConfigParser instances which use "fallback" instead '
-                 'of "default". Replace your code with "%s"' % new_call,
-                 DeprecationWarning)
+            warn_origin = get_previous_location()
+            warn('At %r: Using the "default" argument to Config.get() will no '
+                 'longer work in config_resolver 5.0! Version 5 will return '
+                 'standard Python ConfigParser instances which use "fallback" '
+                 'instead of "default". Replace your code with "%s"' % (
+                    warn_origin, new_call), DeprecationWarning)
             have_default = True
         else:
             have_default = False
