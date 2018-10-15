@@ -1,3 +1,13 @@
+Release 4.3.0
+-------------
+
+Added
+~~~~~
+
+* The new "transition" function ``get_config`` now also honors the
+  ``secure`` flag in ``lookup_options``.
+
+
 Release 4.2.5.post2
 -------------------
 

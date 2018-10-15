@@ -570,5 +570,14 @@ class ConfigResolver5Transition(TestBase):
             filename='config.ini',
             search_path=None)
 
+    def test_secured_config(self):
+        with patch('config_resolver.core.SecuredConfig') as mck:
+            cfg_b = get_config('world', 'hello', lookup_options={
+                'secure': True
+            })
+        mck.assert_called_with('hello', 'world',
+            filename='config.ini',
+            search_path=None)
+
 if __name__ == '__main__':
     unittest.main()
