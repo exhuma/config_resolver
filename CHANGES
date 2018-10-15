@@ -1,3 +1,13 @@
+Release 4.3.1
+-------------
+
+Fixed
+~~~~~
+
+* Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
+  from ``4.2.5`` via commit ``54168cd``)
+
+
 Release 4.3.0
 -------------
 
