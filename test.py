@@ -8,12 +8,8 @@ from contextlib import contextmanager
 from os.path import abspath, expanduser, join
 from textwrap import dedent
 
-from config_resolver import Config, NoVersionError, SecuredConfig, get_config
-
-try:
-    from ConfigParser import NoOptionError, NoSectionError
-except ImportError:
-    from configparser import NoOptionError, NoSectionError
+from config_resolver import (Config, NoOptionError, NoSectionError,
+                             NoVersionError, SecuredConfig, get_config)
 
 try:
     from mock import patch
