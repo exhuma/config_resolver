@@ -582,10 +582,8 @@ class ConfigResolver5Transition(TestBase):
             cfg, meta = get_config('world', 'hello')
             self.assertEqual(cfg, mck())
 
-        self.assertEqual(meta.active_path, mck().active_path)
-        self.assertEqual(meta.loaded_files, mck().loaded_files)
-        self.assertEqual(meta.config_id, ConfigID('hello', 'world'))
-        self.assertEqual(meta.prefix_filter, mck()._prefix_filter)
+        self.assertEqual(meta.loaded_files, mck()._loaded_files)
+        self.assertEqual(meta.active_path, mck()._active_path)
 
 
 if __name__ == '__main__':
