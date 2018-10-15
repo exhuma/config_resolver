@@ -36,6 +36,30 @@ Upgrading from 4.x
 * Return types for INI files is now a standard library instance of
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
+* The imports of ``NoSectionError`` and ``NoOptionError`` are gone!
+  ``config_resolver`` will no return native instances of the ``configparser``
+  module. Please import them `from there
+  <https://docs.python.org/3/library/configparser.html#exceptions>`_
+
+Release 4.3.1
+-------------
+
+Fixed
+~~~~~
+
+* Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
+  from ``4.2.5`` via commit ``54168cd``)
+
+
+Release 4.3.0
+-------------
+
+Added
+~~~~~
+
+* The new "transition" function ``get_config`` now also honors the
+  ``secure`` flag in ``lookup_options``.
+
 
 Release 4.2.5.post2
 -------------------
