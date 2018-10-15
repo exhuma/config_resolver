@@ -12,6 +12,7 @@ except ImportError:
 import logging
 import stat
 import sys
+from collections import namedtuple
 from distutils.version import StrictVersion
 from os import stat as get_stat
 from os import getcwd, getenv, pathsep
@@ -22,7 +23,17 @@ from warnings import warn
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-__version__ = '4.3.0'
+__version__ = '4.3.1'
+
+
+ConfigID = namedtuple('ConfigID', 'group app')
+LookupResult = namedtuple('LookupResult', 'config meta')
+LookupMetadata = namedtuple('LookupMetadata', [
+    'active_path',
+    'loaded_files',
+    'config_id',
+    'prefix_filter'
+])
 
 
 if sys.hexversion < 0x030000F0:
@@ -177,15 +188,32 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         self.app_name = app_name
         self.search_path = search_path
         self.filename = filename
-        self.loaded_files = []  # type: List[str]
-        self.active_path = []  # type: List[str]
+        self._loaded_files = []  # type: List[str]
+        self._active_path = []  # type: List[str]
         self.env_path_name = "%s_%s_PATH" % (
             self.group_name.upper(),
             self.app_name.upper())
         self.env_filename_name = "%s_%s_FILENAME" % (
             self.group_name.upper(),
             self.app_name.upper())
+        self.require_load = require_load
         self.load(require_load=require_load)
+
+    @property
+    def loaded_files(self):
+        warn_origin = get_warn_location()
+        warn('At %r: The "loaded_files" attribute moved to the "meta" return '
+             'value of "get_config". Use `get_config(...).meta.loaded_files`' %
+             warn_origin, DeprecationWarning)
+        return self._loaded_files
+
+    @property
+    def active_path(self):
+        warn_origin = get_warn_location()
+        warn('At %r: The "active_path" attribute moved to the "meta" return '
+             'value of "get_config". Use `get_config(...).meta.active_path`' %
+             warn_origin, DeprecationWarning)
+        return self._active_path
 
     def get_xdg_dirs(self):
         # type: () -> List[str]
@@ -412,12 +440,12 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # Next, use the resolved path to find the filenames. Keep track of
         # which files we loaded in order to inform the user.
-        self.active_path = [join(_, config_filename) for _ in path]
+        self._active_path = [join(_, config_filename) for _ in path]
         for dirname in path:
             conf_name = join(dirname, config_filename)
             readable = self.check_file(conf_name)
             if readable:
-                action = 'Updating' if self.loaded_files else 'Loading initial'
+                action = 'Updating' if self._loaded_files else 'Loading initial'
                 self._log.info('%s config from %s', action, conf_name)
                 self.read(conf_name)
                 if conf_name == expanduser("~/.%s/%s/%s" % (
@@ -432,14 +460,14 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                         "the file!", expanduser("~"), self.group_name,
                         self.app_name, expanduser("~"), self.group_name,
                         self.app_name)
-                self.loaded_files.append(conf_name)
+                self._loaded_files.append(conf_name)
 
-        if not self.loaded_files and not require_load:
+        if not self._loaded_files and not require_load:
             self._log.warning(
                 "No config file named %s found! Search path was %r",
                 config_filename,
                 path)
-        elif not self.loaded_files and require_load:
+        elif not self._loaded_files and require_load:
             raise IOError("No config file named %s found! Search path "
                           "was %r" % (config_filename, path))
 
@@ -488,7 +516,15 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    return cls(
-        group_name,
-        app_name,
-        **kwargs)
+    cfg = cls(group_name, app_name, **kwargs)
+    output = LookupResult(
+        cfg,
+        LookupMetadata(
+            cfg._active_path,
+            cfg._loaded_files,
+            ConfigID(group_name, app_name),
+            cfg._prefix_filter
+        )
+    )
+
+    return output

@@ -8,12 +8,10 @@ from contextlib import contextmanager
 from os.path import abspath, expanduser, join
 from textwrap import dedent
 
-from config_resolver import Config, NoVersionError, SecuredConfig, get_config
+from config_resolver import (Config, NoOptionError, NoSectionError,
+                             NoVersionError, SecuredConfig, get_config)
 
-try:
-    from ConfigParser import NoOptionError, NoSectionError
-except ImportError:
-    from configparser import NoOptionError, NoSectionError
+from config_resolver.core import ConfigID
 
 try:
     from mock import patch
@@ -578,6 +576,15 @@ class ConfigResolver5Transition(TestBase):
         mck.assert_called_with('hello', 'world',
             filename='config.ini',
             search_path=None)
+
+    def test_return_value(self):
+        with patch('config_resolver.core.Config') as mck:
+            cfg, meta = get_config('world', 'hello')
+            self.assertEqual(cfg, mck())
+
+        self.assertEqual(meta.loaded_files, mck()._loaded_files)
+        self.assertEqual(meta.active_path, mck()._active_path)
+
 
 if __name__ == '__main__':
     unittest.main()
