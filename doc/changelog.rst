@@ -34,7 +34,6 @@ Upgrading from 4.x
 * The following attributes moved to the meta-data object:
 
   * ``active_path``
-  * ``prefix_filter``
   * ``loaded_files``
 
 * Return types for INI files is now a standard library instance of
@@ -50,6 +49,14 @@ Release 4.3.1
 
 Fixed
 ~~~~~
+
+* Fixed return-value of ``get_config``. It now properly returns the same return
+  value as config-resolver 5. New deprecation warnings have been added as well.
+
+  .. warning::
+    This will **BREAK** your code as ``get_config`` now returns a tuple, with
+    the config instance being the first element! This should never have entered
+    like this in the 4.x branch. Sorry about that.
 
 * Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
   from ``4.2.5`` via commit ``54168cd``)
