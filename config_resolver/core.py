@@ -44,7 +44,7 @@ else:
 
 
 def get_new_call(group_name, app_name, search_path, filename, require_load,
-                 version):
+                 version, secure):
     # type: (str, str, Optional[str], str, bool, Optional[str]) -> str
     '''
     Build a call to use the new ``get_config`` function from args passed to
@@ -55,6 +55,7 @@ def get_new_call(group_name, app_name, search_path, filename, require_load,
         'filename': filename
     }  # type: Dict[str, Any]
     new_call_lookup_options = {}  # type: Dict[str, Any]
+    new_call_lookup_options['secure'] = secure
     if search_path:
         new_call_lookup_options['search_path'] = search_path
     if require_load:
@@ -149,8 +150,9 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # Calling this constructor is deprecated and will disappear in version
         # 5.0
+        secure = type(self) == SecuredConfig
         new_call = get_new_call(group_name, app_name, search_path, filename,
-                                require_load, version)
+                                require_load, version, secure)
         warn_origin = get_warn_location()
         if warn_origin:
             warn('At %r: Using the "Config(...)" constructor will be '
@@ -468,7 +470,13 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
 def get_config(app_name, group_name='', filename='',
                lookup_options=None, handler=None):
     # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+
     lookup_options = lookup_options or {}
+    if lookup_options.pop('secure', False):
+        cls = SecuredConfig
+    else:
+        cls = Config
+
     kwargs = {
         'search_path': lookup_options.get('search_path', None),
         'filename': filename or lookup_options.get('filename') or 'config.ini',
@@ -480,7 +488,7 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    return Config(
+    return cls(
         group_name,
         app_name,
         **kwargs)
