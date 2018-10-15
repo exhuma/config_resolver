@@ -12,6 +12,7 @@ except ImportError:
 import logging
 import stat
 import sys
+from collections import namedtuple
 from distutils.version import StrictVersion
 from os import stat as get_stat
 from os import getcwd, getenv, pathsep
@@ -23,6 +24,16 @@ from .exc import NoVersionError
 from .util import PrefixFilter
 
 __version__ = '4.3.1'
+
+
+ConfigID = namedtuple('ConfigID', 'group app')
+LookupResult = namedtuple('LookupResult', 'config meta')
+LookupMetadata = namedtuple('LookupMetadata', [
+    'active_path',
+    'loaded_files',
+    'config_id',
+    'prefix_filter'
+])
 
 
 if sys.hexversion < 0x030000F0:
@@ -488,7 +499,15 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    return cls(
-        group_name,
-        app_name,
-        **kwargs)
+    cfg = cls(group_name, app_name, **kwargs)
+    output = LookupResult(
+        cfg,
+        LookupMetadata(
+            cfg.active_path,
+            cfg.loaded_files,
+            ConfigID(group_name, app_name),
+            cfg._prefix_filter
+        )
+    )
+
+    return output
