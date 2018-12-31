@@ -259,7 +259,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         """
         # same logic for the configuration filename. First, check if we were
         # initialized with a filename...
-        config_filename = None
+        config_filename = ''
         if self.filename:
             config_filename = self.filename
 
@@ -503,18 +503,18 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
 
 def get_config(app_name, group_name='', filename='',
                lookup_options=None, handler=None):
-    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> LookupResult
+    # pylint: disable=protected-access
 
     lookup_options = lookup_options or {}
-    if lookup_options.pop('secure', False):
-        cls = SecuredConfig
-    else:
+    if not lookup_options.pop('secure', False):
         cls = Config
+    else:
+        cls = SecuredConfig
 
-    kwargs = {
-        'search_path': lookup_options.get('search_path', None),
-        'filename': filename or lookup_options.get('filename') or 'config.ini',
-    }
+    search_path = lookup_options.get('search_path', None)
+    filename = filename or lookup_options.get('filename') or 'config.ini'
+
     if 'filename' in lookup_options:
         warn_origin = get_warn_location()
         warn('At %r: "filename" should be passed as direct argument to '
@@ -522,7 +522,7 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    cfg = cls(group_name, app_name, **kwargs)
+    cfg = cls(group_name, app_name, search_path=search_path, filename=filename)
     output = LookupResult(
         cfg,
         LookupMetadata(
