@@ -18,8 +18,8 @@ import stat
 import sys
 from collections import namedtuple
 from distutils.version import StrictVersion
-from os import stat as get_stat
 from os import getcwd, getenv, pathsep
+from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
 from typing import Any, Dict, List, Optional
 from warnings import warn
@@ -165,7 +165,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # Calling this constructor is deprecated and will disappear in version
         # 5.0
-        secure = type(self) == SecuredConfig
+        secure = isinstance(self, SecuredConfig)
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version, secure)
         warn_origin = get_warn_location()
@@ -174,7 +174,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  'deprecated in version 5.0! Use "get_config(...)" instead. '
                  'Your call should be replaceable with: %r' % (
                      warn_origin, new_call),
-                DeprecationWarning)
+                 DeprecationWarning)
 
         # --- end of deprecation check --------------------------------------
 
@@ -400,7 +400,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  'longer work in config_resolver 5.0! Version 5 will return '
                  'standard Python ConfigParser instances which use "fallback" '
                  'instead of "default". Replace your code with "%s"' % (
-                    warn_origin, new_call), DeprecationWarning)
+                     warn_origin, new_call), DeprecationWarning)
             have_default = True
         else:
             have_default = False
