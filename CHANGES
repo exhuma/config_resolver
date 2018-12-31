@@ -1,3 +1,14 @@
+Release 4.3.1.post1
+-------------------
+
+Fixed
+~~~~~
+
+* Fixed type hints
+* Arguments ``require_load`` and ``version`` are no longer ignored in
+  ``get_config``
+
+
 Release 4.3.1
 -------------
 

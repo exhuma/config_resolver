@@ -5,7 +5,11 @@ way of handling configuration files. Additional care has been taken to allow
 the end-user of the application to override this lookup process.
 """
 try:
-    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
+    from ConfigParser import (  # type: ignore
+        SafeConfigParser,
+        NoOptionError,
+        NoSectionError
+    )
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
@@ -14,8 +18,8 @@ import stat
 import sys
 from collections import namedtuple
 from distutils.version import StrictVersion
-from os import stat as get_stat
 from os import getcwd, getenv, pathsep
+from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
 from typing import Any, Dict, List, Optional
 from warnings import warn
@@ -23,7 +27,7 @@ from warnings import warn
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-__version__ = '4.3.1'
+__version__ = '4.3.1.post1'
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
@@ -39,7 +43,7 @@ LookupMetadata = namedtuple('LookupMetadata', [
 if sys.hexversion < 0x030000F0:
     # Python 2
     # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(SafeConfigParser, object):
+    class ConfigResolverBase(SafeConfigParser, object):  # type: ignore
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
@@ -47,7 +51,7 @@ if sys.hexversion < 0x030000F0:
 else:
     # Python 3
     # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
+    class ConfigResolverBase(ConfigParser):  # type: ignore # pylint: disable = too-many-ancestors
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
@@ -56,7 +60,7 @@ else:
 
 def get_new_call(group_name, app_name, search_path, filename, require_load,
                  version, secure):
-    # type: (str, str, Optional[str], str, bool, Optional[str]) -> str
+    # type: (str, str, Optional[str], str, bool, Optional[str], bool) -> str
     '''
     Build a call to use the new ``get_config`` function from args passed to
     ``Config.__init__``.
@@ -161,7 +165,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # Calling this constructor is deprecated and will disappear in version
         # 5.0
-        secure = type(self) == SecuredConfig
+        secure = isinstance(self, SecuredConfig)
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version, secure)
         warn_origin = get_warn_location()
@@ -170,7 +174,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  'deprecated in version 5.0! Use "get_config(...)" instead. '
                  'Your call should be replaceable with: %r' % (
                      warn_origin, new_call),
-                DeprecationWarning)
+                 DeprecationWarning)
 
         # --- end of deprecation check --------------------------------------
 
@@ -201,6 +205,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
     @property
     def loaded_files(self):
+        # type: () -> List[str]
         warn_origin = get_warn_location()
         warn('At %r: The "loaded_files" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.loaded_files`' %
@@ -209,6 +214,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
     @property
     def active_path(self):
+        # type: () -> List[str]
         warn_origin = get_warn_location()
         warn('At %r: The "active_path" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.active_path`' %
@@ -246,14 +252,14 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return expanduser('~/.config/%s/%s' % (self.group_name, self.app_name))
 
     def _effective_filename(self):
-        # type: () -> Optional[str]
+        # type: () -> str
         """
         Returns the filename which is effectively used by the application. If
         overridden by an environment variable, it will return that filename.
         """
         # same logic for the configuration filename. First, check if we were
         # initialized with a filename...
-        config_filename = None
+        config_filename = ''
         if self.filename:
             config_filename = self.filename
 
@@ -359,7 +365,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                 return True
         return True
 
-    def get(self, section, option, **kwargs):
+    def get(self, section, option, **kwargs):  # type: ignore
         # type: (str, str, Any) -> Any
         """
         Overrides :py:meth:`configparser.ConfigParser.get`.
@@ -394,7 +400,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                  'longer work in config_resolver 5.0! Version 5 will return '
                  'standard Python ConfigParser instances which use "fallback" '
                  'instead of "default". Replace your code with "%s"' % (
-                    warn_origin, new_call), DeprecationWarning)
+                     warn_origin, new_call), DeprecationWarning)
             have_default = True
         else:
             have_default = False
@@ -497,18 +503,20 @@ class SecuredConfig(Config):  # pylint: disable = too-many-ancestors
 
 def get_config(app_name, group_name='', filename='',
                lookup_options=None, handler=None):
-    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> Config
+    # type: (str, str, str, Optional[Dict[str, str]], Optional[Any]) -> LookupResult
+    # pylint: disable=protected-access
 
     lookup_options = lookup_options or {}
-    if lookup_options.pop('secure', False):
-        cls = SecuredConfig
-    else:
+    if not lookup_options.pop('secure', False):
         cls = Config
+    else:
+        cls = SecuredConfig
 
-    kwargs = {
-        'search_path': lookup_options.get('search_path', None),
-        'filename': filename or lookup_options.get('filename') or 'config.ini',
-    }
+    search_path = lookup_options.get('search_path', None)
+    filename = filename or lookup_options.get('filename') or 'config.ini'
+    version = lookup_options.get('version', None)
+    require_load = lookup_options.get('require_load', False)
+
     if 'filename' in lookup_options:
         warn_origin = get_warn_location()
         warn('At %r: "filename" should be passed as direct argument to '
@@ -516,7 +524,8 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    cfg = cls(group_name, app_name, **kwargs)
+    cfg = cls(group_name, app_name, search_path=search_path, filename=filename,
+              version=version, require_load=require_load)
     output = LookupResult(
         cfg,
         LookupMetadata(
