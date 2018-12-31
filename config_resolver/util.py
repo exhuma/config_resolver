@@ -5,7 +5,8 @@ This module contains stuff which is not directly impacting the business logic of
 the config_resolver package.
 """
 
-from logging import Filter
+from logging import Filter, LogRecord
+from typing import Any
 
 
 class PrefixFilter(Filter):
@@ -23,6 +24,7 @@ class PrefixFilter(Filter):
         self._separator = separator
 
     def __eq__(self, other):
+        # type: (Any) -> bool
         # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
         # when running the unit-tests through ``sniffer``. Does this have
         # something to do with ``sniffer`` or is there something wrong with the
@@ -37,10 +39,12 @@ class PrefixFilter(Filter):
                 other._separator == self._separator)
 
     def __repr__(self):
+        # type: () -> str
         return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
             self._prefix, self._separator)
 
     def filter(self, record):
+        # type: (LogRecord) -> bool
         # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True

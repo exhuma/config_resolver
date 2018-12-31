@@ -6,15 +6,17 @@ import logging
 import stat
 from collections import namedtuple
 from functools import lru_cache
-from os import stat as get_stat
 from os import getcwd, getenv, pathsep
+from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
+from typing import Any, Dict, Generator, List, NewType, Optional, Tuple
 
 from config_resolver.dirty import StrictVersion
 from config_resolver.handler import ini
 
 from .exc import NoVersionError
 from .util import PrefixFilter
+
 
 ConfigID = namedtuple('ConfigID', 'group app')
 LookupResult = namedtuple('LookupResult', 'config meta')
@@ -26,9 +28,10 @@ LookupMetadata = namedtuple('LookupMetadata', [
 ])
 FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
+Handler = NewType('Handler', object)
 
 
-def from_string(data, handler=None):
+def from_string(data: str, handler: Optional[Handler] = None) -> LookupResult:
     '''
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
@@ -44,7 +47,9 @@ def from_string(data, handler=None):
     ))
 
 
-def get_config(group_name, app_name, lookup_options=None, handler=None):
+def get_config(group_name: str, app_name: str,
+               lookup_options: Optional[Dict[str, Any]] = None,
+               handler: Optional[Handler] = None) -> LookupResult:
     '''
     Factory function to retrieve new config instances.
 
@@ -161,7 +166,8 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
 
 
 @lru_cache(5)
-def prefixed_logger(config_id):
+def prefixed_logger(config_id: ConfigID) -> Tuple[
+        logging.Logger, logging.Filter]:
     '''
     Returns a log instance and prefix filter for a given group- & app-name pair.
 
@@ -178,7 +184,7 @@ def prefixed_logger(config_id):
     return log, prefix_filter
 
 
-def get_xdg_dirs(config_id):
+def get_xdg_dirs(config_id: ConfigID) -> List[str]:
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
     variable or the appropriate default. See :ref:`xdg-spec` for details.
@@ -199,7 +205,7 @@ def get_xdg_dirs(config_id):
     return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
 
 
-def get_xdg_home(config_id):
+def get_xdg_home(config_id: ConfigID) -> str:
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
     or the appropriate default. See :ref:`xdg-spec` for details.
@@ -212,7 +218,7 @@ def get_xdg_home(config_id):
     return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
 
 
-def effective_path(config_id, search_path=''):
+def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     """
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
@@ -264,7 +270,8 @@ def effective_path(config_id, search_path=''):
     return path
 
 
-def find_files(config_id, search_path=None, filename=None):
+def find_files(config_id: ConfigID, search_path: Optional[List[str]] = None,
+               filename: Optional[str] = None) -> Generator[str, None, None]:
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -281,7 +288,7 @@ def find_files(config_id, search_path=None, filename=None):
         yield conf_name
 
 
-def effective_filename(config_id, config_filename):
+def effective_filename(config_id: ConfigID, config_filename: str) -> str:
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
@@ -302,7 +309,7 @@ def effective_filename(config_id, config_filename):
     return config_filename
 
 
-def env_name(config_id):
+def env_name(config_id: ConfigID) -> str:
     '''
     Return the name of the environment variable which contains the file-name to
     load.
@@ -310,7 +317,10 @@ def env_name(config_id):
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(config_id, filename, version=None, secure=False, handler=None):
+def is_readable(config_id: ConfigID, filename: str,
+                version: Optional[str] = None,
+                secure: bool = False,
+                handler: Optional[Handler] = None) -> bool:
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
