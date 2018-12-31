@@ -56,7 +56,7 @@ else:
 
 def get_new_call(group_name, app_name, search_path, filename, require_load,
                  version, secure):
-    # type: (str, str, Optional[str], str, bool, Optional[str]) -> str
+    # type: (str, str, Optional[str], str, bool, Optional[str], bool) -> str
     '''
     Build a call to use the new ``get_config`` function from args passed to
     ``Config.__init__``.
@@ -201,6 +201,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
     @property
     def loaded_files(self):
+        # type: () -> List[str]
         warn_origin = get_warn_location()
         warn('At %r: The "loaded_files" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.loaded_files`' %
@@ -209,6 +210,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
     @property
     def active_path(self):
+        # type: () -> List[str]
         warn_origin = get_warn_location()
         warn('At %r: The "active_path" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.active_path`' %
@@ -246,7 +248,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         return expanduser('~/.config/%s/%s' % (self.group_name, self.app_name))
 
     def _effective_filename(self):
-        # type: () -> Optional[str]
+        # type: () -> str
         """
         Returns the filename which is effectively used by the application. If
         overridden by an environment variable, it will return that filename.
