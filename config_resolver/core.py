@@ -5,7 +5,11 @@ way of handling configuration files. Additional care has been taken to allow
 the end-user of the application to override this lookup process.
 """
 try:
-    from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
+    from ConfigParser import (  # type: ignore
+        SafeConfigParser,
+        NoOptionError,
+        NoSectionError
+    )
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
@@ -39,7 +43,7 @@ LookupMetadata = namedtuple('LookupMetadata', [
 if sys.hexversion < 0x030000F0:
     # Python 2
     # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(SafeConfigParser, object):
+    class ConfigResolverBase(SafeConfigParser, object):  # type: ignore
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
@@ -47,7 +51,7 @@ if sys.hexversion < 0x030000F0:
 else:
     # Python 3
     # pylint: disable = too-few-public-methods
-    class ConfigResolverBase(ConfigParser):  # noqa pylint: disable = too-many-ancestors
+    class ConfigResolverBase(ConfigParser):  # type: ignore # pylint: disable = too-many-ancestors
         """
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
@@ -361,7 +365,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                 return True
         return True
 
-    def get(self, section, option, **kwargs):
+    def get(self, section, option, **kwargs):  # type: ignore
         # type: (str, str, Any) -> Any
         """
         Overrides :py:meth:`configparser.ConfigParser.get`.
