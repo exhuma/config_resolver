@@ -514,6 +514,8 @@ def get_config(app_name, group_name='', filename='',
 
     search_path = lookup_options.get('search_path', None)
     filename = filename or lookup_options.get('filename') or 'config.ini'
+    version = lookup_options.get('version', None)
+    require_load = lookup_options.get('require_load', False)
 
     if 'filename' in lookup_options:
         warn_origin = get_warn_location()
@@ -522,7 +524,8 @@ def get_config(app_name, group_name='', filename='',
              '"lookup_options"!)' % warn_origin,
              DeprecationWarning)
 
-    cfg = cls(group_name, app_name, search_path=search_path, filename=filename)
+    cfg = cls(group_name, app_name, search_path=search_path, filename=filename,
+              version=version, require_load=require_load)
     output = LookupResult(
         cfg,
         LookupMetadata(

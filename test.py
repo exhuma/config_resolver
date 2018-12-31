@@ -521,8 +521,12 @@ class ConfigResolver5Transition(TestBase):
         with patch('config_resolver.core.Config') as mck:
             get_config('foo', 'bar', lookup_options={}, handler='dummy_handler')
             get_config('foo', 'bar', lookup_options={}, handler='dummy_handler')
-        mck.assert_called_with('bar', 'foo', filename='config.ini',
-                               search_path=None)
+        mck.assert_called_with(
+            'bar', 'foo',
+            filename='config.ini',
+            require_load=False,
+            search_path=None,
+            version=None)
 
     def test_search_path(self):
         '''
@@ -535,7 +539,9 @@ class ConfigResolver5Transition(TestBase):
         mck.assert_called_with(
             'hello', 'world',
             filename='config.ini',
-            search_path='testdata:testdata/a:testdata/b')
+            require_load=False,
+            search_path='testdata:testdata/a:testdata/b',
+            version=None)
 
     def test_filename(self):
         '''
@@ -545,7 +551,9 @@ class ConfigResolver5Transition(TestBase):
             cfg_b = get_config('world', 'hello', filename='test.ini')
         mck.assert_called_with('hello', 'world',
             filename='test.ini',
-            search_path=None)
+            require_load=False,
+            search_path=None,
+            version=None)
 
         with patch('config_resolver.core.Config') as mck:
             cfg_b = get_config('world', 'hello', lookup_options={
@@ -554,7 +562,9 @@ class ConfigResolver5Transition(TestBase):
 
         mck.assert_called_with('hello', 'world',
             filename='test.ini',
-            search_path=None)
+            require_load=False,
+            search_path=None,
+            version=None)
 
     def test_new_default_filename(self):
         '''
@@ -566,7 +576,9 @@ class ConfigResolver5Transition(TestBase):
             cfg_b = get_config('world', 'hello')
         mck.assert_called_with('hello', 'world',
             filename='config.ini',
-            search_path=None)
+            require_load=False,
+            search_path=None,
+            version=None)
 
     def test_secured_config(self):
         with patch('config_resolver.core.SecuredConfig') as mck:
@@ -575,7 +587,9 @@ class ConfigResolver5Transition(TestBase):
             })
         mck.assert_called_with('hello', 'world',
             filename='config.ini',
-            search_path=None)
+            require_load=False,
+            search_path=None,
+            version=None)
 
     def test_return_value(self):
         with patch('config_resolver.core.Config') as mck:
