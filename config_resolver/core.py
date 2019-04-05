@@ -27,7 +27,7 @@ from warnings import warn
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-__version__ = '4.3.1.post1'
+__version__ = '4.3.2'
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
