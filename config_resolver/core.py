@@ -111,25 +111,6 @@ def build_call_str(prefix, args, kwargs):
     return ''.join(output)
 
 
-def get_warn_location():
-    # type: () -> str
-    '''
-    Gets the location where the function was called or "<unknown>" if it was
-    unable to get the location.
-
-    If this returns an empty string, we assume the warning can be ignored.
-    '''
-    try:
-        from inspect import stack
-        frame = stack()[2]
-        if (frame.filename, frame.function) == (__file__, 'get_config'):
-            return ''
-        output = '{0.filename} at line {0.lineno}'.format(frame)
-    except:  # pylint: disable=bare-except
-        output = '<unknown>'
-    return output
-
-
 class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     """
     :param group_name: an application group (f. ex.: your company name)
@@ -168,13 +149,11 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         secure = isinstance(self, SecuredConfig)
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version, secure)
-        warn_origin = get_warn_location()
-        if warn_origin:
-            warn('At %r: Using the "Config(...)" constructor will be '
-                 'deprecated in version 5.0! Use "get_config(...)" instead. '
-                 'Your call should be replaceable with: %r' % (
-                     warn_origin, new_call),
-                 DeprecationWarning)
+        warn('Using the "Config(...)" constructor will be '
+             'deprecated in version 5.0! Use "get_config(...)" instead. '
+             'Your call should be replaceable with: %r' % (new_call),
+             DeprecationWarning,
+             stacklevel=2)
 
         # --- end of deprecation check --------------------------------------
 
@@ -206,19 +185,17 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     @property
     def loaded_files(self):
         # type: () -> List[str]
-        warn_origin = get_warn_location()
-        warn('At %r: The "loaded_files" attribute moved to the "meta" return '
+        warn('The "loaded_files" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.loaded_files`' %
-             warn_origin, DeprecationWarning)
+             DeprecationWarning, stacklevel=2)
         return self._loaded_files
 
     @property
     def active_path(self):
         # type: () -> List[str]
-        warn_origin = get_warn_location()
-        warn('At %r: The "active_path" attribute moved to the "meta" return '
+        warn('The "active_path" attribute moved to the "meta" return '
              'value of "get_config". Use `get_config(...).meta.active_path`' %
-             warn_origin, DeprecationWarning)
+             DeprecationWarning, stacklevel=2)
         return self._active_path
 
     def get_xdg_dirs(self):
@@ -395,12 +372,12 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
             new_kwargs = {'fallback': default}
             new_kwargs.update(kwargs)
             new_call = build_call_str('.get', (section, option), new_kwargs)
-            warn_origin = get_warn_location()
-            warn('At %r: Using the "default" argument to Config.get() will no '
+            warn('Using the "default" argument to Config.get() will no '
                  'longer work in config_resolver 5.0! Version 5 will return '
                  'standard Python ConfigParser instances which use "fallback" '
-                 'instead of "default". Replace your code with "%s"' % (
-                     warn_origin, new_call), DeprecationWarning)
+                 'instead of "default". Replace your code with "%s"' % new_call,
+                 DeprecationWarning,
+                 stacklevel=2)
             have_default = True
         else:
             have_default = False
@@ -518,11 +495,9 @@ def get_config(app_name, group_name='', filename='',
     require_load = lookup_options.get('require_load', False)
 
     if 'filename' in lookup_options:
-        warn_origin = get_warn_location()
-        warn('At %r: "filename" should be passed as direct argument to '
+        warn('"filename" should be passed as direct argument to '
              'get_config instead of passing it in '
-             '"lookup_options"!)' % warn_origin,
-             DeprecationWarning)
+             '"lookup_options"!)', DeprecationWarning, stacklevel=2)
 
     cfg = cls(group_name, app_name, search_path=search_path, filename=filename,
               version=version, require_load=require_load)
