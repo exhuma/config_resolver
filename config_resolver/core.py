@@ -27,7 +27,7 @@ from warnings import warn
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-__version__ = '4.3.2'
+__version__ = '4.3.3'
 
 
 ConfigID = namedtuple('ConfigID', 'group app')
@@ -186,7 +186,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     def loaded_files(self):
         # type: () -> List[str]
         warn('The "loaded_files" attribute moved to the "meta" return '
-             'value of "get_config". Use `get_config(...).meta.loaded_files`' %
+             'value of "get_config". Use `get_config(...).meta.loaded_files`',
              DeprecationWarning, stacklevel=2)
         return self._loaded_files
 
@@ -194,7 +194,7 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
     def active_path(self):
         # type: () -> List[str]
         warn('The "active_path" attribute moved to the "meta" return '
-             'value of "get_config". Use `get_config(...).meta.active_path`' %
+             'value of "get_config". Use `get_config(...).meta.active_path`',
              DeprecationWarning, stacklevel=2)
         return self._active_path
 
