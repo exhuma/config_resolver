@@ -17,7 +17,6 @@ from config_resolver.handler import ini
 from .exc import NoVersionError
 from .util import PrefixFilter
 
-
 ConfigID = namedtuple('ConfigID', 'group app')
 LookupResult = namedtuple('LookupResult', 'config meta')
 LookupMetadata = namedtuple('LookupMetadata', [
