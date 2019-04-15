@@ -7,6 +7,7 @@ import unittest
 from contextlib import contextmanager
 from os.path import abspath, expanduser, join
 from textwrap import dedent
+from warnings import catch_warnings
 
 from config_resolver import (Config, NoOptionError, NoSectionError,
                              NoVersionError, SecuredConfig, get_config)
@@ -598,6 +599,19 @@ class ConfigResolver5Transition(TestBase):
 
         self.assertEqual(meta.loaded_files, mck()._loaded_files)
         self.assertEqual(meta.active_path, mck()._active_path)
+
+    def test_no_warning(self):
+        """
+        If we receive a call via "get_config" we should *not* raise a warning
+        """
+        with catch_warnings(record=True) as warnings:
+            cfg, meta = get_config('world', 'hello')
+
+        my_warnings = [wrn for wrn in warnings if 'get_config' in str(wrn)]
+        self.assertEqual(
+            len(my_warnings),
+            0,
+            "We should not have seen a warning from this call")
 
 
 if __name__ == '__main__':
