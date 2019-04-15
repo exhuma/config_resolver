@@ -1,3 +1,31 @@
+Release 4.3.4
+-------------
+
+Fixed
+~~~~~
+
+* Don't emit deprecation warnings when the code is called as expected.
+
+
+Release 4.3.3
+-------------
+
+Fixed
+~~~~~
+
+* Fixed a regression introduced by 4.3.2
+
+
+Release 4.3.2
+-------------
+
+Fixed
+~~~~~
+
+* Replace hand-crafted code with ``stack_level`` information for deprecation
+  warnings
+
+
 Release 4.3.1.post1
 -------------------
 
