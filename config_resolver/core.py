@@ -48,6 +48,7 @@ if sys.hexversion < 0x030000F0:
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
+        _suppress_warning = False
 else:
     # Python 3
     # pylint: disable = too-few-public-methods
@@ -56,6 +57,7 @@ else:
         A default "base" object simplifying Python 2 and Python 3
         compatibility.
         """
+        _suppress_warning = False
 
 
 def get_new_call(group_name, app_name, search_path, filename, require_load,
@@ -149,11 +151,12 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
         secure = isinstance(self, SecuredConfig)
         new_call = get_new_call(group_name, app_name, search_path, filename,
                                 require_load, version, secure)
-        warn('Using the "Config(...)" constructor will be '
-             'deprecated in version 5.0! Use "get_config(...)" instead. '
-             'Your call should be replaceable with: %r' % (new_call),
-             DeprecationWarning,
-             stacklevel=2)
+        if not self._suppress_warning:
+            warn('Using the "Config(...)" constructor will be '
+                 'deprecated in version 5.0! Use "get_config(...)" instead. '
+                 'Your call should be replaceable with: %r' % (new_call),
+                 DeprecationWarning,
+                 stacklevel=2)
 
         # --- end of deprecation check --------------------------------------
 
@@ -488,6 +491,11 @@ def get_config(app_name, group_name='', filename='',
         cls = Config
     else:
         cls = SecuredConfig
+
+    # Using "suppress_warning" is a small hack introduced in the 4.x branch to
+    # signal the warnings module that we were called correctly and should not
+    # emit a warning
+    cls._suppress_warning = True
 
     search_path = lookup_options.get('search_path', None)
     filename = filename or lookup_options.get('filename') or 'config.ini'
