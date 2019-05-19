@@ -1,6 +1,23 @@
 Changelog
 =========
 
+Release 5.0.0.post1
+-------------------
+
+* Some fixes got lost when merging the 5.0 release branch into master. The
+  latest commit re-merged those changes. They are:
+
+  * Missing changelog updates
+  * Fixed imports in ``config_resolver/__init__.py``
+  * Missing type-hints in ``config_resolver/core.py``
+  * Missing type-hints in ``config_resolver/util.py``
+  * Missing exception ``config_resolver.IncompatibleVersion``
+  * Version number fix in the documentation
+  * Removed obsolete version check in ``setup.py``
+  * Added type-information sentinel file (PEP 561 compliance)
+  * Missing metadata for pyup.io
+
+
 Release 5.0.0
 -------------
 
@@ -34,15 +51,28 @@ Upgrading from 4.x
 * The following attributes moved to the meta-data object:
 
   * ``active_path``
+  * ``prefix_filter``
   * ``loaded_files``
 
 * Return types for INI files is now a standard library instance of
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 * The imports of ``NoSectionError`` and ``NoOptionError`` are gone!
-  ``config_resolver`` will no return native instances of the
+  ``config_resolver`` will now return native instances of the
   :py:mod:`configparser` module. Please import them `from there
   <https://docs.python.org/3/library/configparser.html#exceptions>`_
+
+
+Release 4.3.1.post1
+-------------------
+
+Fixed
+~~~~~
+
+* Fixed type hints
+* Arguments ``require_load`` and ``version`` are no longer ignored in
+  ``get_config``
+
 
 Release 4.3.1
 -------------
@@ -80,6 +110,7 @@ Fixes
 
 * ``filename`` can now be passed as direct argument to ``get_config``
 * Don't warn if the config is retrieved correctly
+
 
 Release 4.2.5.post1
 -------------------
@@ -267,5 +298,7 @@ Features added
 
 * Changelog added
 
+
+.. _XDG specification: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 .. vim: set ft=rst :

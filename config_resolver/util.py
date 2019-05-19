@@ -8,7 +8,6 @@ the config_resolver package.
 from logging import Filter, LogRecord
 from typing import Any
 
-
 class PrefixFilter(Filter):
     """
     A logging filter which prefixes each message with a given text.
@@ -23,8 +22,7 @@ class PrefixFilter(Filter):
         self._prefix = prefix
         self._separator = separator
 
-    def __eq__(self, other):
-        # type: (Any) -> bool
+    def __eq__(self, other: Any) -> bool:
         # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
         # when running the unit-tests through ``sniffer``. Does this have
         # something to do with ``sniffer`` or is there something wrong with the
@@ -38,13 +36,11 @@ class PrefixFilter(Filter):
                 other._prefix == self._prefix and
                 other._separator == self._separator)
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
             self._prefix, self._separator)
 
-    def filter(self, record):
-        # type: (LogRecord) -> bool
+    def filter(self, record) -> bool:
         # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True

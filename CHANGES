@@ -1,3 +1,20 @@
+Release 5.0.0.post1
+-------------------
+
+* Some fixes got lost when merging the 5.0 release branch into master. The
+  latest commit re-merged those changes. They are:
+
+  * Missing changelog updates
+  * Fixed imports in ``config_resolver/__init__.py``
+  * Missing type-hints in ``config_resolver/core.py``
+  * Missing type-hints in ``config_resolver/util.py``
+  * Missing exception ``config_resolver.IncompatibleVersion``
+  * Version number fix in the documentation
+  * Removed obsolete version check in ``setup.py``
+  * Added type-information sentinel file (PEP 561 compliance)
+  * Missing metadata for pyup.io
+
+
 Release 5.0.0
 -------------
 
@@ -37,7 +54,7 @@ Upgrading from 4.x
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 * The imports of ``NoSectionError`` and ``NoOptionError`` are gone!
-  ``config_resolver`` will no return native instances of the ``configparser``
+  ``config_resolver`` will now return native instances of the ``configparser``
   module. Please import them `from there
   <https://docs.python.org/3/library/configparser.html#exceptions>`_
 
@@ -163,6 +180,13 @@ Features added
 
 * GROUP and APP names are now included in the log messages.
 
+
+Fixes
+~~~~~
+
+* Python 2/3 Unicode fix in log records
+
+
 Release 4.1.0
 -------------
 
@@ -173,6 +197,7 @@ Features added
 
   ``config_resolver`` will now search in the folders/names defined in the `XDG
   specification`_.
+
 
 Release 4.0.0
 -------------
