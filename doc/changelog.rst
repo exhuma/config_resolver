@@ -1,100 +1,45 @@
-Fixed
-~~~~~
+Changelog
+=========
 
-* Fixed return-value of ``get_config``. It now properly returns the same return
-  value as config-resolver 5. New deprecation warnings have been added as well.
-
-  .. warning::
-    This will **BREAK** your code as ``get_config`` now returns a tuple, with
-    the config instance being the first element! This should never have entered
-    like this in the 4.x branch. Sorry about that.
-
-* Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
-  from ``4.2.5`` via commit ``54168cd``)
-
-
-Release 4.3.0
+Release 5.0.0
 -------------
 
-Added
-~~~~~
+.. warning::
 
-* The new "transition" function ``get_config`` now also honors the
-  ``secure`` flag in ``lookup_options``.
+    Major API changes! Read the full documentation before upgrading!
 
+* Python 2 support is now dropped!
+* Add the possibility to supply a custom file "handler" (f.ex. YAML or other
+  custom parsers).
+* Add :py:mod:`config_resolver.handler.json` as optional file-handler.
+* Refactored from a simple module to a full-fledged Python package
+* Retrieving a config instance no longer returns a subclass of the
+  :py:class:`configparser.ConfigParser` class. Instead, it will return whatever
+  the supplied handler creates.
+* External API changed to a functional API. You no longer call the ``Config``
+  constructor, but instead use the :py:func:`~config_resolver.get_config()`
+  function.
+* Retrieval meta-data is returned along-side the retrieved config. This
+  separation allows a custom handler to return any type without impacting the
+  internal logic of ``config_resolver``.
+* Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
+  XDG standar ``~/.config/group-name/app-name``.
 
-Release 4.2.5.post2
--------------------
+Upgrading from 4.x
+~~~~~~~~~~~~~~~~~~
 
-Fixes
-~~~~~
+* Replace ``Config`` with ``get_config``
+* The result from the call to ``get_config`` now returns two objects: The
+  config instance and additional metadata.
+* The following attributes moved to the meta-data object:
 
-* ``filename`` can now be passed as direct argument to ``get_config``
-* Don't warn if the config is retrieved correctly
+  * ``active_path``
+  * ``prefix_filter``
+  * ``loaded_files``
 
-Release 4.2.5.post1
--------------------
-
-Fixes
-~~~~~
-
-* Improved warning detail in deprecation messages.
-
-
-Release 4.2.5
--------------
-
-Fixes
-~~~~~
-
-* Change from a module-only distrbution to a package (for PEP-561)
-* Make package PEP-561 compliant
-* Add transition function ``config_resolver.get_config`` for a smoother upgrade
-  to v5.0 in the future.
-* Add deprecation warnings with details on how to change the code for a smooth
-  transition to v5.0
-
-
-Release 4.2.4
--------------
-
-Fixes
-~~~~~
-
-* Improve code quality.
-* Improve log message for invalid config version numbers.
-
-
-Release 4.2.3
--------------
-
-Fixes
-~~~~~
-
-* Unit tests fixed
-* Added missing LICENSE file
-* Log messages will now show the complete version string
-* Auto-detect version number if none is specifiec in the ``[meta]`` section.
-* Fix travis CI pipeline
-
-
-Release 4.2.2
--------------
-
-Fixes
-~~~~~
-
-* Python 2/3 class-inheritance fixed.
-
-
-Release 4.2.1
--------------
-
-Fixes
-~~~~~
-
-* Log message prefixes no longer added multiple times
-
+* Return types for INI files is now a standard library instance of
+  :py:class:`configparser.ConfigParser`. This means that the ``default``
+  keyword argument to ``get`` has been replaced with ``fallback``.
 
 Release 4.2.0
 -------------
@@ -102,13 +47,7 @@ Release 4.2.0
 Features added
 ~~~~~~~~~~~~~~
 
-* Application & Group name is added to log records
-
-Fixes
-~~~~~
-
-* Python 2/3 Unicode fix in log records
-
+* GROUP and APP names are now included in the log messages.
 
 Release 4.1.0
 -------------
@@ -118,8 +57,8 @@ Features added
 
 * XDG Basedir support
 
-  ``config_resolver`` will now search in the folders/names defined in the `XDG
-  specification`_.
+  ``config_resolver`` will now search in the folders/names defined in the :ref:`XDG
+  specification <xdg-spec>`.
 
 
 Release 4.0.0

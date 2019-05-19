@@ -7,7 +7,9 @@ NAME = "config_resolver"
 DESCRIPTION = "A small package to automatically find a configuration file."
 AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
-VERSION = __import__(PACKAGE).__version__
+
+with open('config_resolver/version.txt') as fptr:
+    VERSION = fptr.read().strip()
 
 DEPENDENCIES = []  # type: ignore
 if sys.version_info < (3, 0):
@@ -23,12 +25,7 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
-    packages=['config_resolver'],
-    install_requires=DEPENDENCIES,
-    requires=DEPENDENCIES,
-    package_data={
-        'config_resolver': ['py.typed'],
-    },
+    packages=find_packages(),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
@@ -36,11 +33,11 @@ setup(
         '(LGPLv3)',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3 :: Only',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )

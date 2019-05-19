@@ -1,33 +1,22 @@
 config\_resolver package
 ========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    config_resolver.handler
+
 Submodules
 ----------
 
-config\_resolver.core module
-----------------------------
+.. toctree::
 
-.. automodule:: config_resolver.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-config\_resolver.exc module
----------------------------
-
-.. automodule:: config_resolver.exc
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-config\_resolver.util module
-----------------------------
-
-.. automodule:: config_resolver.util
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   config_resolver.core
+   config_resolver.dirty
+   config_resolver.exc
+   config_resolver.util
 
 Module contents
 ---------------

@@ -1,9 +1,11 @@
 language: python
 python:
-  - "2.7"
   - "3.4"
   - "3.5"
-  - "3.5-dev" # 3.5 development branch
+  - "3.6"
+  - "3.6-dev" # 3.6 development branch
   - "nightly" # currently points to 3.6-dev
-install: "pip install typing && pip install ."
-script: "pytest test.py"
+install: "pip install -r travis-requirements.txt"
+before_script:
+  - chmod 600 tests/examples/configs/secure.ini
+script: "pytest tests"
