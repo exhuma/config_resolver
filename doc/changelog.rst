@@ -1,5 +1,21 @@
 Changelog
 =========
+Release 5.0.0.post1
+-------------------
+
+* Something fixes got lost when merging the 5.0 release branch into master. The
+  latest commit re-merged those changes. They are:
+
+  * Missing changelog updates
+  * Fixed imports in ``config_resolver/__init__.py``
+  * Missing type-hints in ``config_resolver/core.py``
+  * Missing type-hints in ``config_resolver/util.py``
+  * Missing exception ``config_resolver.IncompatibleVersion``
+  * Version number fix in the documentation
+  * Removed obsolete version check in ``setup.py``
+  * Added type-information sentinel file (PEP 561 compliance)
+  * Missing metadata for pyup.io
+
 
 Release 5.0.0
 -------------
@@ -40,6 +56,124 @@ Upgrading from 4.x
 * Return types for INI files is now a standard library instance of
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
+* The imports of ``NoSectionError`` and ``NoOptionError`` are gone!
+  ``config_resolver`` will now return native instances of the
+  :py:mod:`configparser` module. Please import them `from there
+  <https://docs.python.org/3/library/configparser.html#exceptions>`_
+
+
+Release 4.3.1.post1
+-------------------
+
+Fixed
+~~~~~
+
+* Fixed type hints
+* Arguments ``require_load`` and ``version`` are no longer ignored in
+  ``get_config``
+
+
+Release 4.3.1
+-------------
+
+Fixed
+~~~~~
+
+* Fixed return-value of ``get_config``. It now properly returns the same return
+  value as config-resolver 5. New deprecation warnings have been added as well.
+
+  .. warning::
+    This will **BREAK** your code as ``get_config`` now returns a tuple, with
+    the config instance being the first element! This should never have entered
+    like this in the 4.x branch. Sorry about that.
+
+* Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
+  from ``4.2.5`` via commit ``54168cd``)
+
+
+Release 4.3.0
+-------------
+
+Added
+~~~~~
+
+* The new "transition" function ``get_config`` now also honors the
+  ``secure`` flag in ``lookup_options``.
+
+
+Release 4.2.5.post2
+-------------------
+
+Fixes
+~~~~~
+
+* ``filename`` can now be passed as direct argument to ``get_config``
+* Don't warn if the config is retrieved correctly
+
+
+Release 4.2.5.post1
+-------------------
+
+Fixes
+~~~~~
+
+* Improved warning detail in deprecation messages.
+
+
+Release 4.2.5
+-------------
+
+Fixes
+~~~~~
+
+* Change from a module-only distrbution to a package (for PEP-561)
+* Make package PEP-561 compliant
+* Add transition function ``config_resolver.get_config`` for a smoother upgrade
+  to v5.0 in the future.
+* Add deprecation warnings with details on how to change the code for a smooth
+  transition to v5.0
+
+
+Release 4.2.4
+-------------
+
+Fixes
+~~~~~
+
+* Improve code quality.
+* Improve log message for invalid config version numbers.
+
+
+Release 4.2.3
+-------------
+
+Fixes
+~~~~~
+
+* Unit tests fixed
+* Added missing LICENSE file
+* Log messages will now show the complete version string
+* Auto-detect version number if none is specifiec in the ``[meta]`` section.
+* Fix travis CI pipeline
+
+
+Release 4.2.2
+-------------
+
+Fixes
+~~~~~
+
+* Python 2/3 class-inheritance fixed.
+
+
+Release 4.2.1
+-------------
+
+Fixes
+~~~~~
+
+* Log message prefixes no longer added multiple times
+
 
 Release 4.2.0
 -------------
@@ -48,6 +182,13 @@ Features added
 ~~~~~~~~~~~~~~
 
 * GROUP and APP names are now included in the log messages.
+
+
+Fixes
+~~~~~
+
+* Python 2/3 Unicode fix in log records
+
 
 Release 4.1.0
 -------------
@@ -156,5 +297,7 @@ Features added
 
 * Changelog added
 
+
+.. _XDG specification: http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 .. vim: set ft=rst :

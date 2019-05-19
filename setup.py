@@ -1,5 +1,3 @@
-import sys
-
 from setuptools import find_packages, setup
 
 PACKAGE = "config_resolver"
@@ -11,10 +9,6 @@ AUTHOR_EMAIL = "michel@albert.lu"
 with open('config_resolver/version.txt') as fptr:
     VERSION = fptr.read().strip()
 
-DEPENDENCIES = []  # type: ignore
-if sys.version_info < (3, 0):
-    DEPENDENCIES.append('typing')
-
 setup(
     name=NAME,
     version=VERSION,
@@ -25,7 +19,10 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     include_package_data=True,
-    packages=find_packages(),
+    packages=['config_resolver'],
+    package_data={
+        'config_resolver': ['py.typed'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
