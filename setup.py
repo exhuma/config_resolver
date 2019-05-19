@@ -24,7 +24,7 @@ setup(
         'config_resolver': ['py.typed'],
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU Lesser General Public License v3 '
         '(LGPLv3)',
