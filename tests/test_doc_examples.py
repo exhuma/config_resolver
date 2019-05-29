@@ -51,7 +51,7 @@ class TestDocExamples(unittest.TestCase):
             data = execute(filename)
         result = data['cfg']
 
-        dictified = result.meta._asdict()  # makes testing easier
+        dictified = dict(result.meta._asdict())  # makes testing easier
         prefix_filter = dictified.pop('prefix_filter')  # Cannot do a simple equality for this!
         expected = {
             'active_path': ['tests/examples/configs/versioned.ini'],

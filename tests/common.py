@@ -38,13 +38,15 @@ class CommonTests:
         '''
         Returned objects should be of the expected type from the parser.
         '''
-        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertIsInstance(config, self.EXPECTED_OBJECT_TYPE)
 
     def test_get(self):
-        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertEqual(self._get(config, 'section1', 'var1'), 'foo')
@@ -52,13 +54,15 @@ class CommonTests:
         self.assertEqual(self._get(config, 'section2', 'var1'), 'baz')
 
     def test_no_option_error(self):
-        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertIs(self._get(config, 'section1', 'b', default=None), None)
 
     def test_no_section_error(self):
-        result = get_config('hello', 'world', {'search_path': self.DATA_PATH},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': self.DATA_PATH},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertIs(self._get(config, 'a', 'b', default=None), None)
@@ -67,7 +71,8 @@ class CommonTests:
         with environment(HELLO_WORLD_FILENAME=self.TEST_FILENAME,
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            result = get_config('world', 'hello',
+                                handler=self.HANDLER_CLASS)
         expected = ['/etc/hello/world/%s' % self.TEST_FILENAME,
                     '/etc/xdg/hello/world/%s' % self.TEST_FILENAME,
                     expanduser('~/.config/hello/world/%s' % self.TEST_FILENAME),
@@ -78,7 +83,8 @@ class CommonTests:
 
     def test_env_name_override(self):
         with environment(HELLO_WORLD_FILENAME=self.TEST_FILENAME):
-            get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            get_config('world', 'hello',
+                       handler=self.HANDLER_CLASS)
         msg = ("filename was overridden with '%s' by the environment "
                "variable HELLO_WORLD_FILENAME" % self.TEST_FILENAME)
         self.catcher.assert_contains(
@@ -89,7 +95,8 @@ class CommonTests:
     def test_env_path(self):
         path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
         with environment(HELLO_WORLD_PATH=path):
-            result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            result = get_config('world', 'hello',
+                                handler=self.HANDLER_CLASS)
         expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
                     '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
                     '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)]
@@ -99,7 +106,8 @@ class CommonTests:
 
     def test_lookup_options_path(self):
         path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
-        result = get_config('hello', 'world', {'search_path': path},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': path},
                             handler=self.HANDLER_CLASS)
         expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
                     '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
@@ -111,7 +119,8 @@ class CommonTests:
     def test_env_path_override_log(self):
         path = '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
         with environment(HELLO_WORLD_PATH=path):
-            get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            get_config('world', 'hello',
+                       handler=self.HANDLER_CLASS)
         msg = ("overridden with '%s' by the "
                "environment variable 'HELLO_WORLD_PATH'") % path
         self.catcher.assert_contains(
@@ -124,7 +133,8 @@ class CommonTests:
         with environment(HELLO_WORLD_PATH=path,
                          XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            result = get_config('world', 'hello',
+                                handler=self.HANDLER_CLASS)
         expected = [
             '/etc/hello/world/%s' % self.APP_FILENAME,
             '/etc/xdg/hello/world/%s' % self.APP_FILENAME,
@@ -141,7 +151,8 @@ class CommonTests:
     def test_env_path_add_log(self):
         path = '+{0}:{0}/a:{0}/b'.format(self.DATA_PATH)
         with environment(HELLO_WORLD_PATH=path):
-            get_config('hello', 'world', handler=self.HANDLER_CLASS)
+            get_config('world', 'hello',
+                       handler=self.HANDLER_CLASS)
         msg = ("extended with '%s' by the "
                "environment variable HELLO_WORLD_PATH") % path
         self.catcher.assert_contains(
@@ -150,8 +161,8 @@ class CommonTests:
             msg)
 
     def test_search_path(self):
-        result = get_config('hello', 'world',
-                            {'search_path': '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)},
+        result = get_config('world', 'hello',
+                            lookup_options={'search_path': '{0}:{0}/a:{0}/b'.format(self.DATA_PATH)},
                             handler=self.HANDLER_CLASS)
         config = result.config
         self.assertEqual(self._get(config, 'section3', 'var1'), 'Hello World!')
@@ -165,8 +176,8 @@ class CommonTests:
             ])
 
     def test_filename(self):
-        result = get_config('hello', 'world',
-                            {
+        result = get_config('world', 'hello',
+                            lookup_options={
                                 'filename': self.TEST_FILENAME,
                                 'search_path': self.DATA_PATH,
                             },
@@ -174,7 +185,8 @@ class CommonTests:
         self.assertEqual(self._get(result.config, 'section2', 'var1'), 'baz')
 
     def test_app_group_name(self):
-        result = get_config('hello', 'world', handler=self.HANDLER_CLASS)
+        result = get_config('world', 'hello',
+                            handler=self.HANDLER_CLASS)
         self.assertEqual(result.meta.config_id.group, 'hello')
         self.assertEqual(result.meta.config_id.app, 'world')
 
@@ -184,8 +196,8 @@ class CommonTests:
         catcher = TestableHandler()
         logger.addHandler(catcher)
         get_config(
-            'hello', 'world',
-            {
+            'world', 'hello',
+            lookup_options={
                 'filename': self.TEST_FILENAME,
                 'search_path': self.DATA_PATH,
                 'secure': True,
@@ -200,8 +212,8 @@ class CommonTests:
             expected_message)
 
     def test_unsecured_file(self):
-        result = get_config('hello', 'world',
-                            {
+        result = get_config('world', 'hello',
+                            lookup_options={
                                 'filename': self.TEST_FILENAME,
                                 'search_path': self.DATA_PATH,
                                 'secure': True,
@@ -219,8 +231,8 @@ class CommonTests:
         path = join(self.DATA_PATH, self.SECURE_FILENAME)
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
 
-        result = get_config('hello', 'world',
-                            {
+        result = get_config('world', 'hello',
+                            lookup_options={
                                 'filename': self.SECURE_FILENAME,
                                 'search_path': self.DATA_PATH,
                                 'secure': True,
@@ -229,8 +241,8 @@ class CommonTests:
         self.assertIn(path, result.meta.loaded_files)
 
     def test_secured_nonexisting_file(self):
-        result = get_config('hello', 'world',
-                            {
+        result = get_config('world', 'hello',
+                            lookup_options={
                                 'filename': 'nonexisting.ini',
                                 'search_path': self.DATA_PATH,
                                 'secure': True,
@@ -241,8 +253,8 @@ class CommonTests:
 
     def test_file_not_found_exception(self):
         with self.assertRaises(IOError):
-            get_config('hello', 'world',
-                       {
+            get_config('world', 'hello',
+                       lookup_options={
                            'filename': 'nonexisting.ini',
                            'search_path': self.DATA_PATH,
                            'require_load': True,
@@ -251,16 +263,16 @@ class CommonTests:
 
     def test_no_version_found_warning(self):
         with self.assertRaises(NoVersionError):
-            get_config('hello', 'world',
-                       {
+            get_config('world', 'hello',
+                       lookup_options={
                            'search_path': self.DATA_PATH,
                            'version': '1.1',
                        },
                        handler=self.HANDLER_CLASS)
 
     def test_mismatching_major(self):
-        result = get_config('hello', 'world',
-                            {
+        result = get_config('world', 'hello',
+                            lookup_options={
                                 'search_path': '%s/versioned' % self.DATA_PATH,
                                 'version': '1.1',
                             },
@@ -288,8 +300,8 @@ class CommonTests:
         self.assertEqual(meta.loaded_files, [])
 
     def test_mismatching_minor(self):
-        get_config('hello', 'world',
-                   {
+        get_config('world', 'hello',
+                   lookup_options={
                        'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '2.0',
                    },
@@ -314,8 +326,8 @@ class CommonTests:
         files even if the application did not explicitly request a version
         number!
         """
-        get_config('hello', 'world',
-                   {
+        get_config('world', 'hello',
+                   lookup_options={
                     'filename': self.MISMATCH_FILENAME,
                     'search_path': '{0}/versioned:{0}/versioned2'.format(self.DATA_PATH),
                    },
@@ -336,7 +348,8 @@ class CommonTests:
     def test_xdg_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME=''):
-            result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
+            result = get_config('bar', 'foo',
+                                handler=self.HANDLER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/%s' % self.APP_FILENAME,
                 '/xdgpath2/foo/bar/%s' % self.APP_FILENAME,
@@ -348,7 +361,8 @@ class CommonTests:
     def test_xdg_empty_config_dirs(self):
         with environment(XDG_CONFIG_DIRS='',
                          XDG_CONFIG_HOME=''):
-            result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
+            result = get_config('bar', 'foo',
+                                handler=self.HANDLER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/%s' % self.APP_FILENAME,
                 '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
@@ -359,7 +373,8 @@ class CommonTests:
     def test_xdg_config_home(self):
         with environment(XDG_CONFIG_HOME='/path/to/config/home',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
+            result = get_config('bar', 'foo',
+                                handler=self.HANDLER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/%s' % self.APP_FILENAME,
                 '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
@@ -370,7 +385,8 @@ class CommonTests:
     def test_xdg_empty_config_home(self):
         with environment(XDG_CONFIG_HOME='',
                          XDG_CONFIG_DIRS=''):
-            result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
+            result = get_config('bar', 'foo',
+                                handler=self.HANDLER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/%s' % self.APP_FILENAME,
                 '/etc/xdg/foo/bar/%s' % self.APP_FILENAME,
@@ -381,7 +397,8 @@ class CommonTests:
     def test_both_xdg_variables(self):
         with environment(XDG_CONFIG_DIRS='/xdgpath1:/xdgpath2',
                          XDG_CONFIG_HOME='/xdg/config/home'):
-            result = get_config('foo', 'bar', handler=self.HANDLER_CLASS)
+            result = get_config('bar', 'foo',
+                                handler=self.HANDLER_CLASS)
             self.assertEqual([
                 '/etc/foo/bar/%s' % self.APP_FILENAME,
                 '/xdgpath2/foo/bar/%s' % self.APP_FILENAME,
@@ -394,14 +411,14 @@ class CommonTests:
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        get_config('hello', 'world',
-                   {
+        get_config('world', 'foo',
+                   lookup_options={
                        'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '2.0'
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains_regex(
-            'config_resolver.hello.world',
+            'config_resolver.foo.world',
             logging.WARNING,
             '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
 
@@ -409,8 +426,8 @@ class CommonTests:
         """
         When getting a version number mismatch, the filename should be logged!
         """
-        get_config('hello', 'world',
-                   {
+        get_config('world', 'hello',
+                   lookup_options={
                        'search_path': '%s/versioned' % self.DATA_PATH,
                        'version': '5.0',
                    },
@@ -426,5 +443,5 @@ class CommonTests:
         the metadata. Make sure this is really the case. This is a good idea so
         users can easily remove the filter necessary.
         '''
-        result = get_config('hello', 'world')
+        result = get_config('world', 'hello')
         self.assertIsNotNone(result.meta.prefix_filter)

@@ -6,8 +6,8 @@ import logging
 import stat
 from collections import namedtuple
 from functools import lru_cache
-from os import stat as get_stat
 from os import getcwd, getenv, pathsep
+from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
 
 from config_resolver.dirty import StrictVersion
@@ -44,23 +44,35 @@ def from_string(data, handler=None):
     ))
 
 
-def get_config(group_name, app_name, lookup_options=None, handler=None):
+def get_config(app_name, group_name='', filename='', lookup_options=None,
+               handler=None):
     '''
     Factory function to retrieve new config instances.
 
-    *group_name* and *app_name* are used to determine the folder locations. We
-    always assume a structure like
-    ``<group_name>/<app_name>/<filename>.<extension>``.
+    *app_name* is the only required argument for config lookups. If nothing else
+    is specified, this will trigger a lookup in default XDG locations for a
+    config file. The filename itself is dictated by the handler. The default
+    ".ini" handler looks for a file named "app.ini".
+
+    *lookup_options* contains arguments which allow more fine-grained control
+    of the lookup process. See below for details.
+
+    The *handler* may be a class which is responsible for loading the config
+    file. *config_resolver* uses a ".ini" file handler by default and comes
+    bundles with a JSON handler as well. They can be found in the
+    :py:module:`config_resolver.handler` package.
 
     *lookup_options* is a dictionary with the following optional keys:
+
+    **group_name** (default=``''``)
+        An optional name for a sub-folder which is *prepended* to the
+        application name. This helps grouping application configs. If left
+        empty no group folder is prepended.
 
     **search_path** (default=``[]``)
         A list of folders that should be searched for config files. The order
         here is relevant. The folders will be searched in order, and each file
         which is found will be loaded by the *handler*.
-
-    **filename** (default=``'app.ini'``)
-        The *basename* of the file which should be loaded (f.ex.: ``db.ini``)
 
     **require_load** (default=``False``)
         A boolean value which determines what happens if *no* file was loaded.
@@ -80,10 +92,9 @@ def get_config(group_name, app_name, lookup_options=None, handler=None):
         handler.
 
     **secure** (default=``False``)
-        If set to ``True``, files which are world-readable will be ignored. The
-        idea here is nicked from the way SSH handles files with sensitive data.
-        It forces you to have secure file-access rights because the file will be
-        skipped if the rights are too open.
+        If set to ``True``, files which are world-readable will be ignored.
+        This forces you to have secure file-access rights because the file will
+        be skipped if the rights are too open.
     '''
     handler = handler or ini
     config_id = ConfigID(group_name, app_name)
