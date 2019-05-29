@@ -18,12 +18,12 @@ Release 5.0.0
   the supplied handler creates.
 * External API changed to a functional API. You no longer call the ``Config``
   constructor, but instead use the :py:func:`~config_resolver.get_config()`
-  function.
+  function. See the API docs for the changes in function signature.
 * Retrieval meta-data is returned along-side the retrieved config. This
   separation allows a custom handler to return any type without impacting the
   internal logic of ``config_resolver``.
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
-  XDG standar ``~/.config/group-name/app-name``.
+  XDG standard ``~/.config/group-name/app-name``.
 
 Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
