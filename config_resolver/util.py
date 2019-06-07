@@ -5,11 +5,8 @@ This module contains stuff which is not directly impacting the business logic of
 the config_resolver package.
 """
 
-from logging import Filter, LogRecord
-from typing import Any
 
-
-class PrefixFilter(Filter):
+class PrefixFilter(object):
     """
     A logging filter which prefixes each message with a given text.
 
@@ -19,11 +16,11 @@ class PrefixFilter(Filter):
     """
     # pylint: disable = too-few-public-methods
 
-    def __init__(self, prefix: str, separator: str = ' ') -> None:
+    def __init__(self, prefix, separator=' '):
         self._prefix = prefix
         self._separator = separator
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other):
         # NOTE: using ``isinstance(other, PrefixFilter)`` did NOT work properly
         # when running the unit-tests through ``sniffer``. Does this have
         # something to do with ``sniffer`` or is there something wrong with the
@@ -37,11 +34,11 @@ class PrefixFilter(Filter):
                 other._prefix == self._prefix and
                 other._separator == self._separator)
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
             self._prefix, self._separator)
 
-    def filter(self, record) -> bool:
+    def filter(self, record):
         # pylint: disable = missing-docstring
         record.msg = self._separator.join([self._prefix, record.msg])
         return True

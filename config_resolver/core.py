@@ -9,14 +9,12 @@ from functools import lru_cache
 from os import getcwd, getenv, pathsep
 from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
-from typing import Any, Dict, Generator, List, NewType, Optional, Tuple
 
 from config_resolver.dirty import StrictVersion
 from config_resolver.handler import ini
 
 from .exc import NoVersionError
 from .util import PrefixFilter
-
 
 ConfigID = namedtuple('ConfigID', 'group app')
 LookupResult = namedtuple('LookupResult', 'config meta')
@@ -28,10 +26,9 @@ LookupMetadata = namedtuple('LookupMetadata', [
 ])
 FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
-Handler = NewType('Handler', object)
 
 
-def from_string(data: str, handler: Optional[Handler] = None) -> LookupResult:
+def from_string(data, handler=None):
     '''
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
@@ -47,30 +44,51 @@ def from_string(data: str, handler: Optional[Handler] = None) -> LookupResult:
     ))
 
 
-def get_config(group_name: str, app_name: str,
-               lookup_options: Optional[Dict[str, Any]] = None,
-               handler: Optional[Handler] = None) -> LookupResult:
+def get_config(app_name, group_name='', lookup_options=None, handler=None):
     '''
     Factory function to retrieve new config instances.
 
-    *group_name* and *app_name* are used to determine the folder locations. We
-    always assume a structure like
-    ``<group_name>/<app_name>/<filename>.<extension>``.
+    *app_name* is the only required argument for config lookups. If nothing else
+    is specified, this will trigger a lookup in default XDG locations for a
+    config file in a subfolder with that name.
+
+    *group_name* is an optional subfolder which is *prefixed* to the subfolder
+    based on the *app_name*. This can be used to group related configurations
+    together.
+
+    To summarise the two above paragraphs the relative path (relative to the
+    search locations) will be:
+
+    * ``<app_name>/<filename>`` if only *app_name* is given
+    * ``<group_name>/<app_name>/<filename>`` if both *app_name* and
+      *group_name* are given
+
+    *lookup_options* contains arguments which allow more fine-grained control
+    of the lookup process. See below for details.
+
+    The *handler* may be a class which is responsible for loading the config
+    file. *config_resolver* uses a ".ini" file handler by default and comes
+    bundles with a JSON handler as well. They can be found in the
+    :py:module:`config_resolver.handler` package.
 
     *lookup_options* is a dictionary with the following optional keys:
+
+    **filename** (default=``''``)
+        This can be used to override the default filename of the selected
+        handler. If left empty, the handler will be responsible for the
+        filename.
 
     **search_path** (default=``[]``)
         A list of folders that should be searched for config files. The order
         here is relevant. The folders will be searched in order, and each file
-        which is found will be loaded by the *handler*.
-
-    **filename** (default=``'app.ini'``)
-        The *basename* of the file which should be loaded (f.ex.: ``db.ini``)
+        which is found will be loaded by the *handler*. Note that the search
+        path should not include *group_name* or *app_name* as they will be
+        appended automatically.
 
     **require_load** (default=``False``)
         A boolean value which determines what happens if *no* file was loaded.
         If this is set to ``True`` the call to ``get_config`` will raise an
-        exception if no file was found. Otherwise it will simply log a warning.
+        exception if no file was found. Otherwise it will log a warning.
 
     **version** (default=``None``)
         This can be a string in the form ``<major>.<minor>``. If specified, the
@@ -79,16 +97,18 @@ def get_config(group_name: str, app_name: str,
         the minor-number differs, the file will be loaded, but a warning will be
         logged. If the major number differs, the file will be skipped and an
         error will be logged. If the value is left unset, no version checking
-        will be performed.
+        will be performed. If this is left unspecified and a config file is
+        encountered with a version number, a sanity check is performed on
+        subsequent config-files to ensure that no mismatching major versions
+        are loaded in the lookup-chain.
 
         How the version has to be stored in the config file depends on the
         handler.
 
     **secure** (default=``False``)
-        If set to ``True``, files which are world-readable will be ignored. The
-        idea here is nicked from the way SSH handles files with sensitive data.
-        It forces you to have secure file-access rights because the file will be
-        skipped if the rights are too open.
+        If set to ``True``, files which are world-readable will be ignored.
+        This forces you to have secure file-access rights because the file will
+        be skipped if the rights are too open.
     '''
     handler = handler or ini
     config_id = ConfigID(group_name, app_name)
@@ -166,8 +186,7 @@ def get_config(group_name: str, app_name: str,
 
 
 @lru_cache(5)
-def prefixed_logger(config_id: ConfigID) -> Tuple[
-        logging.Logger, logging.Filter]:
+def prefixed_logger(config_id):
     '''
     Returns a log instance and prefix filter for a given group- & app-name pair.
 
@@ -184,7 +203,7 @@ def prefixed_logger(config_id: ConfigID) -> Tuple[
     return log, prefix_filter
 
 
-def get_xdg_dirs(config_id: ConfigID) -> List[str]:
+def get_xdg_dirs(config_id):
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
     variable or the appropriate default. See :ref:`xdg-spec` for details.
@@ -205,7 +224,7 @@ def get_xdg_dirs(config_id: ConfigID) -> List[str]:
     return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
 
 
-def get_xdg_home(config_id: ConfigID) -> str:
+def get_xdg_home(config_id):
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
     or the appropriate default. See :ref:`xdg-spec` for details.
@@ -218,7 +237,7 @@ def get_xdg_home(config_id: ConfigID) -> str:
     return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
 
 
-def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
+def effective_path(config_id, search_path=''):
     """
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
@@ -270,8 +289,7 @@ def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     return path
 
 
-def find_files(config_id: ConfigID, search_path: Optional[List[str]] = None,
-               filename: Optional[str] = None) -> Generator[str, None, None]:
+def find_files(config_id, search_path=None, filename=None):
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -288,7 +306,7 @@ def find_files(config_id: ConfigID, search_path: Optional[List[str]] = None,
         yield conf_name
 
 
-def effective_filename(config_id: ConfigID, config_filename: str) -> str:
+def effective_filename(config_id, config_filename):
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
@@ -309,7 +327,7 @@ def effective_filename(config_id: ConfigID, config_filename: str) -> str:
     return config_filename
 
 
-def env_name(config_id: ConfigID) -> str:
+def env_name(config_id):
     '''
     Return the name of the environment variable which contains the file-name to
     load.
@@ -317,10 +335,7 @@ def env_name(config_id: ConfigID) -> str:
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(config_id: ConfigID, filename: str,
-                version: Optional[str] = None,
-                secure: bool = False,
-                handler: Optional[Handler] = None) -> bool:
+def is_readable(config_id, filename, version=None, secure=False, handler=None):
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
