@@ -44,8 +44,7 @@ def from_string(data, handler=None):
     ))
 
 
-def get_config(app_name, group_name='', filename='', lookup_options=None,
-               handler=None):
+def get_config(app_name, group_name='', lookup_options=None, handler=None):
     '''
     Factory function to retrieve new config instances.
 
@@ -64,9 +63,6 @@ def get_config(app_name, group_name='', filename='', lookup_options=None,
     * ``<group_name>/<app_name>/<filename>`` if both *app_name* and
       *group_name* are given
 
-    *filename* can be used to override the default filename of the selected
-    handler. If left empty, the handler will be responsible for the filename.
-
     *lookup_options* contains arguments which allow more fine-grained control
     of the lookup process. See below for details.
 
@@ -76,6 +72,11 @@ def get_config(app_name, group_name='', filename='', lookup_options=None,
     :py:module:`config_resolver.handler` package.
 
     *lookup_options* is a dictionary with the following optional keys:
+
+    **filename** (default=``''``)
+        This can be used to override the default filename of the selected
+        handler. If left empty, the handler will be responsible for the
+        filename.
 
     **search_path** (default=``[]``)
         A list of folders that should be searched for config files. The order
