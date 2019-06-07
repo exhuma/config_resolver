@@ -51,8 +51,21 @@ def get_config(app_name, group_name='', filename='', lookup_options=None,
 
     *app_name* is the only required argument for config lookups. If nothing else
     is specified, this will trigger a lookup in default XDG locations for a
-    config file. The filename itself is dictated by the handler. The default
-    ".ini" handler looks for a file named "app.ini".
+    config file in a subfolder with that name.
+
+    *group_name* is an optional subfolder which is *prefixed* to the subfolder
+    based on the *app_name*. This can be used to group related configurations
+    together.
+
+    To summarise the two above paragraphs the relative path (relative to the
+    search locations) will be:
+
+    * ``<app_name>/<filename>`` if only *app_name* is given
+    * ``<group_name>/<app_name>/<filename>`` if both *app_name* and
+      *group_name* are given
+
+    *filename* can be used to override the default filename of the selected
+    handler. If left empty, the handler will be responsible for the filename.
 
     *lookup_options* contains arguments which allow more fine-grained control
     of the lookup process. See below for details.
@@ -64,20 +77,17 @@ def get_config(app_name, group_name='', filename='', lookup_options=None,
 
     *lookup_options* is a dictionary with the following optional keys:
 
-    **group_name** (default=``''``)
-        An optional name for a sub-folder which is *prepended* to the
-        application name. This helps grouping application configs. If left
-        empty no group folder is prepended.
-
     **search_path** (default=``[]``)
         A list of folders that should be searched for config files. The order
         here is relevant. The folders will be searched in order, and each file
-        which is found will be loaded by the *handler*.
+        which is found will be loaded by the *handler*. Note that the search
+        path should not include *group_name* or *app_name* as they will be
+        appended automatically.
 
     **require_load** (default=``False``)
         A boolean value which determines what happens if *no* file was loaded.
         If this is set to ``True`` the call to ``get_config`` will raise an
-        exception if no file was found. Otherwise it will simply log a warning.
+        exception if no file was found. Otherwise it will log a warning.
 
     **version** (default=``None``)
         This can be a string in the form ``<major>.<minor>``. If specified, the
@@ -86,7 +96,10 @@ def get_config(app_name, group_name='', filename='', lookup_options=None,
         the minor-number differs, the file will be loaded, but a warning will be
         logged. If the major number differs, the file will be skipped and an
         error will be logged. If the value is left unset, no version checking
-        will be performed.
+        will be performed. If this is left unspecified and a config file is
+        encountered with a version number, a sanity check is performed on
+        subsequent config-files to ensure that no mismatching major versions
+        are loaded in the lookup-chain.
 
         How the version has to be stored in the config file depends on the
         handler.
