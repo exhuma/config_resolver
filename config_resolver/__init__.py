@@ -12,8 +12,12 @@ It also provides metadata:
 
 from os.path import dirname, join
 
-from .core import from_string, get_config
-from .exc import NoVersionError
+from .core import (
+    NoVersionError,
+    from_string,
+    get_config,
+)
+
 
 with open(join(dirname(__file__), 'version.txt')) as fptr:
     __version__ = fptr.read().strip()
