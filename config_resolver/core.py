@@ -492,6 +492,11 @@ def get_config(app_name, group_name='', filename='',
     else:
         cls = SecuredConfig
 
+    if filename and 'filename' not in lookup_options:
+        warn('"filename" will be taken from the *lookup_options* argument in '
+             'the future instead of a direct function argument!',
+             DeprecationWarning, stacklevel=2)
+
     # Using "suppress_warning" is a small hack introduced in the 4.x branch to
     # signal the warnings module that we were called correctly and should not
     # emit a warning
@@ -501,11 +506,6 @@ def get_config(app_name, group_name='', filename='',
     filename = filename or lookup_options.get('filename') or 'config.ini'
     version = lookup_options.get('version', None)
     require_load = lookup_options.get('require_load', False)
-
-    if 'filename' in lookup_options:
-        warn('"filename" should be passed as direct argument to '
-             'get_config instead of passing it in '
-             '"lookup_options"!)', DeprecationWarning, stacklevel=2)
 
     cfg = cls(group_name, app_name, search_path=search_path, filename=filename,
               version=version, require_load=require_load)
