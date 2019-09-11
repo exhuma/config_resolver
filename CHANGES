@@ -1,3 +1,13 @@
+Release 4.3.5
+-------------
+
+Fixed
+~~~~~
+
+* The deprecation warning about the *filename* argument stated the exact
+  opposite to what it should have said :( This is fixed now
+
+
 Release 4.3.4
 -------------
 
