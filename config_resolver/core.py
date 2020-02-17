@@ -304,7 +304,13 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
 
         # Check if the file is version-compatible with this instance.
         new_config = ConfigResolverBase()
-        new_config.read(filename)
+        try:
+            new_config.read(filename)
+        except:  # pylint: disable=bare-except
+            self._log.critical(
+                "Unable to read %r", abspath(filename), exc_info=True)
+            return False
+
         if self.version and not new_config.has_option('meta', 'version'):
             # self.version is set, so we MUST have a version in the file!
             raise NoVersionError(

@@ -487,6 +487,17 @@ class FunctionalityTests(TestBase):
             logging.ERROR,
             'testdata/versioned/app.ini')
 
+    def test_check_file_errored(self):
+        """
+        IF a file is unreadable as config, we want to skip it without crashing
+        """
+        with patch("config_resolver.core.exists") as exists:
+            exists.return_value = True
+            cfg = Config('hello', 'world', search_path='testdata/versioned',
+                         version='5.0')
+            result = cfg.check_file("testdata/broken.ini")
+            self.assertFalse(result)
+
 
 class Regressions(TestBase):
 
