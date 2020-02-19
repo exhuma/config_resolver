@@ -356,7 +356,17 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     unreadable_reason = '<unknown>'
 
     # Check if the file is version-compatible with this instance.
-    config_instance = handler.from_filename(filename)
+    try:
+        config_instance = handler.from_filename(filename)
+    except:  #  pylint: disable=bare-except
+        log.critical("Unable to read %r", abspath(filename), exc_info=True)
+        return FileReadability(
+            False,
+            filename,
+            "Exception encountered when loading the file",
+            None,
+        )
+
     instance_version = handler.get_version(config_instance)
 
     if version and not instance_version:
