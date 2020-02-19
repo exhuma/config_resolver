@@ -193,6 +193,9 @@ def prefixed_logger(config_id):
     The call to this function is cached to ensure we only have one instance in
     memory.
     '''
+    if config_id is None:
+        log = logging.getLogger('config_resolver')
+        return log, None
     log = logging.getLogger('config_resolver.{}.{}'.format(
         config_id.group,
         config_id.app))
