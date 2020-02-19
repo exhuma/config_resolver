@@ -17,3 +17,12 @@ def test_readability_error(caplog):
         msg for msg in caplog.messages
         if "broken.ini" in msg and "Unable to read" in msg
     ]
+
+
+def test_prefix_filter_empty():
+    """
+    If we have no empty config-ID, we don't want to break the prefix filter
+    """
+    logger, prefix_filter = core.prefixed_logger(None)
+    assert prefix_filter is None
+    assert logger.name == "config_resolver"
