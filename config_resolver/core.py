@@ -10,10 +10,11 @@ from os import getcwd, getenv, pathsep
 from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
 
-from config_resolver.dirty import StrictVersion
-from config_resolver.handler import ini
+from config_resolver.dirty import StrictVersion  # type: ignore
+from config_resolver.handler.ini import IniHandler
 
 from .exc import NoVersionError
+from .handler.base import Handler
 from .util import PrefixFilter
 
 ConfigID = namedtuple('ConfigID', 'group app')
@@ -28,12 +29,12 @@ FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
 
 
-def from_string(data, handler=None):
+def from_string(data: str, handler=None):
     '''
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
     '''
-    handler = handler or ini
+    handler = handler or IniHandler
     # TODO: This still does not do any version checking!
     new_config = handler.from_string(data)
     return LookupResult(new_config, LookupMetadata(
@@ -110,7 +111,7 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
     '''
-    handler = handler or ini
+    handler = handler or IniHandler
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
 
@@ -349,7 +350,7 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     :param handler: The handler to be used to open and parse the file.
     """
     log, _ = prefixed_logger(config_id)
-    handler = handler or ini
+    handler = handler or IniHandler
 
     if not exists(filename):
         return FileReadability(False, filename, 'File not found', None)

@@ -4,12 +4,12 @@ Tests the "JSON" file handler.
 import unittest
 from textwrap import dedent
 
-from config_resolver.handler import json
+from config_resolver.handler.json import JsonHandler
 from common import CommonTests
 
 
 class JsonTest(CommonTests, unittest.TestCase):
-    HANDLER_CLASS = json
+    HANDLER_CLASS = JsonHandler
     TEST_FILENAME = 'test.json'
     APP_FILENAME = 'app.json'
     DATA_PATH = 'testdata/json'
