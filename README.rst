@@ -15,9 +15,10 @@ PyPI
 
 
 ``config_resolver`` provides a simple, yet flexible way to provide
-configuration to your applications. It follows the :ref:`XDG specification
-<xdg-spec>` for config file locations, and adds additional ways to override
-config locations. The aims of this package are:
+configuration to your applications. It follows the `XDG Base Dir Spec
+<https://standards.freedesktop.org/basedir-spec/0.8/>`_ (This instance is
+based on 0.8 of this spec) for config file locations, and adds additional ways
+to override config locations. The aims of this package are:
 
 * Provide a simple API
 * Follow well-known standards for config-file locations
