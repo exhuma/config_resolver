@@ -1,10 +1,8 @@
-Introduction
-############
+Usage
+#####
 
-.. include:: ../README.rst
-
-Description / Usage
-~~~~~~~~~~~~~~~~~~~
+Basics
+~~~~~~
 
 The module provides one function to retrieve a config instance:
 
@@ -17,8 +15,9 @@ and one function to create a config from a text-string:
 A simple usage looks like this::
 
     from config_resolver imoprt get_config
-    result = get_config('acmecorp', 'bird_feeder')
-    cfg = result.config
+    result = get_config('bird_feeder', 'acmecorp')
+    cfg = result.config  # The config instance (its type depends on the handler)
+    meta = result.meta  # Metadata for the loading-process
 
 This will look for config files in (in that order):
 
@@ -38,7 +37,6 @@ defaults in ``/etc`` and specialise/override from there.
     custom file-handlers, which may behave differently. If using a custom
     file-handler make sure to understand how it behaves! See
     :ref:`custom-handler`.
-
 
 .. _xdg-spec:
 
@@ -74,7 +72,7 @@ This is a dictionary controlling how the files are searched and which files are
 valid.  The default options are::
 
     default_options = {
-        'search_path': [],  # <- empty list here triggers the default search path
+        'search_path': '',  # <- empty string here triggers the default search path
         'filename': 'app.ini',  # <- this depends on the file-handler
         'require_load': False,
         'version': None,
@@ -106,20 +104,23 @@ Config file example::
     [database]
     dsn=foobar
 
-If you don't specify a version number in the construcor versioning will trigger
-automatically on the first file encountered which has a version number. The
-reason this triggers is to prevent accidentally loading files which
-incompatible version.
+If you don't specify a version number in the constructor versioning will
+trigger automatically on the first file encountered which has a version number.
+The reason this triggers is to prevent accidentally loading files further down
+the chain which have an incompatible version.
 
 Only "major" and "minor" numbers are supported. If the application encounters a
 file with a different "major" value, it will emit a log message with severity
-``ERROR`` and the file will be skipped.  Differences in minor numbers are only
-logged with a "warning" level but the file will be loaded.
+``ERROR`` and the file will be skipped. If the minor version of a file is
+smaller than the expected version, an error is logged as well and the file is
+skipped. If the minor version is equal or larger (inside the config file), then
+the file will be loaded.
 
-Rule of thumb: If your application accepts a new config value, but can function
-just fine with previous and default values, increment the minor number. If on
-the other hand, something has changed, and the user needs to change the config
-file, increment the major number.
+In other words, for a file to be loaded, the major versions that the
+application expected (via the ``get_config`` call) must match the major version
+in the config-file **and** the expectes minor version must be **smaller** than
+the minor version inside the config-file.
+
 
 Requiring files (bail out if no config is found)
 ------------------------------------------------
@@ -128,9 +129,9 @@ Since version 3.3.0, you have a bit more control about how files are loaded.
 The :py:func:`~config_resolver.core.get_config` function takes the
 lookup_options value ``require_load``. If this is set to ``True``, an
 :py:exc:`OSError` is raised if no config file was loaded. Alternatively, and,
-purely a matter of taste, you can leave this on it's default ``False`` value
-and inspect the ``loaded_files`` attribute on the ``meta`` attribute of the
-returned result. If it's empty, nothing has been loaded.
+purely a matter of presonal preference, you can leave this on it's default
+``False`` value and inspect the ``loaded_files`` attribute on the ``meta``
+attribute of the returned result. If it's empty, nothing has been loaded.
 
 Overriding internal defaults
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

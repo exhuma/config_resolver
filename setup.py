@@ -20,6 +20,9 @@ setup(
     license="MIT",
     include_package_data=True,
     packages=find_packages(),
+    package_data = {
+        'config_resolver': ['py.typed'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

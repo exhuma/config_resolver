@@ -24,13 +24,15 @@ Release 5.0.0
   internal logic of ``config_resolver``.
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
   XDG standard ``~/.config/group-name/app-name``.
+* Fully type-hinted
 
 Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
 
 * Replace ``Config`` with ``get_config``
-* The result from the call to ``get_config`` now returns two objects: The
-  config instance and additional metadata.
+* The result from the call to ``get_config`` now returns a named-tuple with two
+  objects: The config instance (``.config``) and additional metadata
+  (``.meta``).
 * The following attributes moved to the meta-data object:
 
   * ``active_path``
@@ -59,7 +61,6 @@ Features added
 
   ``config_resolver`` will now search in the folders/names defined in the :ref:`XDG
   specification <xdg-spec>`.
-
 
 Release 4.0.0
 -------------

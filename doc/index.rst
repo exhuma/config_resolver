@@ -1,5 +1,5 @@
-Welcome to config_resolver's documentation!
-===========================================
+.. include:: ../README.rst
+
 
 Table of Contents
 ~~~~~~~~~~~~~~~~~

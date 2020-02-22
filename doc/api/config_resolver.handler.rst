@@ -1,18 +1,38 @@
-config\_resolver\.handler package
-=================================
+config\_resolver.handler package
+================================
 
 Submodules
 ----------
 
-.. toctree::
+config\_resolver.handler.base module
+------------------------------------
 
-   config_resolver.handler.ini
-   config_resolver.handler.json
+.. automodule:: config_resolver.handler.base
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+config\_resolver.handler.ini module
+-----------------------------------
+
+.. automodule:: config_resolver.handler.ini
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+config\_resolver.handler.json module
+------------------------------------
+
+.. automodule:: config_resolver.handler.json
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
 
 .. automodule:: config_resolver.handler
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

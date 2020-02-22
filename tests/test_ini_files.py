@@ -5,12 +5,12 @@ from configparser import ConfigParser
 import unittest
 from textwrap import dedent
 
-from config_resolver.handler import ini
+from config_resolver.handler.ini import IniHandler
 from common import CommonTests
 
 
 class IniTest(CommonTests, unittest.TestCase):
-    HANDLER_CLASS = ini
+    HANDLER_CLASS = IniHandler
     TEST_FILENAME = 'test.ini'
     APP_FILENAME = 'app.ini'
     DATA_PATH = 'testdata/ini'

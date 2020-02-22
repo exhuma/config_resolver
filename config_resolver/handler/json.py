@@ -3,52 +3,45 @@ Handler for JSON files
 '''
 
 from json import load, loads
+from typing import Any, Dict, Optional
 
-from config_resolver.dirty import StrictVersion
+from packaging.version import Version
 
-DEFAULT_FILENAME = 'app.json'
+from .base import Handler
 
-
-def empty():
-    '''
-    Create an empty configuration instance.
-    '''
-    return {}
+TJsonConfig = Dict[str, Any]
 
 
-def from_string(data):
-    '''
-    Create a configuration instance from a text-string
-    '''
-    return loads(data)
+class JsonHandler(Handler[TJsonConfig]):
+    """
+    A config-resolver handler capable of reading ".json" files.
+    """
+    DEFAULT_FILENAME = 'app.json'
 
+    @staticmethod
+    def empty() -> TJsonConfig:
+        return {}
 
-def from_filename(filename):
-    '''
-    Create a configuration instance from a file-name.
-    '''
-    with open(filename) as fptr:
-        output = load(fptr)
-    return output
+    @staticmethod
+    def from_string(data: str) -> TJsonConfig:
+        return loads(data)  # type: ignore
 
+    @staticmethod
+    def from_filename(filename: str) -> TJsonConfig:
+        with open(filename) as fptr:
+            output = load(fptr)
+        return output  # type: ignore
 
-def get_version(data):
-    '''
-    Retrieve the parsed version number from a given config instance.
-    '''
-    if 'meta' not in data or 'version' not in data['meta']:
-        return None
-    raw_value = data['meta']['version']
-    parsed = StrictVersion(raw_value)
-    return parsed
+    @staticmethod
+    def get_version(config: TJsonConfig) -> Optional[Version]:
+        if 'meta' not in config or 'version' not in config['meta']:
+            return None
+        raw_value = config['meta']['version']
+        parsed = Version(raw_value)
+        return parsed
 
-
-def update_from_file(data, filename):
-    '''
-    Updates an existing config instance from a given filename.
-
-    The config instance in *data* will be modified in-place!
-    '''
-    with open(filename) as fptr:
-        new_data = load(fptr)
-        data.update(new_data)
+    @staticmethod
+    def update_from_file(config: TJsonConfig, filename: str) -> None:
+        with open(filename) as fptr:
+            new_data = load(fptr)
+            config.update(new_data)
