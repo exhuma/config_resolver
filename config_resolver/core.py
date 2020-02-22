@@ -416,14 +416,14 @@ def is_readable(
                 instance_version)
             insecure_readable = False
             unreadable_reason = msg
-        elif expected_minor != minor:
+        elif expected_minor > minor:
             msg = 'Mismatching minor version number in %r. Expected %r, got %r!'
             log.warning(
                 msg,
                 abspath(filename),
                 str(version),
                 instance_version)
-            insecure_readable = True
+            insecure_readable = False
             unreadable_reason = msg
 
     if insecure_readable and secure:

@@ -303,7 +303,7 @@ class CommonTests:
         get_config('world', 'hello',
                    lookup_options={
                        'search_path': '%s/versioned' % self.DATA_PATH,
-                       'version': '2.0',
+                       'version': '2.2',
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains(
@@ -313,11 +313,11 @@ class CommonTests:
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
-            '2.1')
+            '2.2')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
             logging.WARNING,
-            '2.0')
+            '2.1')
 
     def test_mixed_version_load(self):
         """
@@ -414,7 +414,7 @@ class CommonTests:
         get_config('world', 'foo',
                    lookup_options={
                        'search_path': '%s/versioned' % self.DATA_PATH,
-                       'version': '2.0'
+                       'version': '2.2'
                    },
                    handler=self.HANDLER_CLASS)
         self.catcher.assert_contains_regex(
