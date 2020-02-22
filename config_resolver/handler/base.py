@@ -6,45 +6,49 @@ from typing import Any, Generic, TypeVar
 
 from config_resolver.dirty import StrictVersion  # type: ignore
 
-T = TypeVar("T", bound=Any)  # pylint: disable=invalid-name
+TConfig = TypeVar("TConfig", bound=Any)  # pylint: disable=invalid-name
 
 
-class Handler(Generic[T]):
+class Handler(Generic[TConfig]):
     """
     A generic config file handler. Concrete classes should be created in order
     to support new file formats.
     """
 
+    #: The filename that is used when the user did not specify a filename when
+    #: retrieving the config instance
+    DEFAULT_FILENAME = 'unknown'
+
     @staticmethod
-    def empty() -> T:
+    def empty() -> TConfig:
         """
         Create an empty configuration instance.
         """
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def from_string(data: str) -> T:
+    def from_string(data: str) -> TConfig:
         """
         Create a configuration instance from a text-string
         """
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def from_filename(filename: str) -> T:
+    def from_filename(filename: str) -> TConfig:
         """
         Create a configuration instance from a file-name.
         """
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def get_version(config: T) -> StrictVersion:
+    def get_version(config: TConfig) -> StrictVersion:
         """
         Retrieve the parsed version number from a given config instance.
         """
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def update_from_file(config: T, filename: str) -> None:
+    def update_from_file(config: TConfig, filename: str) -> None:
         """
         Updates an existing config instance from a given filename.
 

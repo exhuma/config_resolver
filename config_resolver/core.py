@@ -6,9 +6,11 @@ import logging
 import stat
 from collections import namedtuple
 from functools import lru_cache
+from logging import Filter, Logger
 from os import getcwd, getenv, pathsep
 from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type, cast
 
 from config_resolver.dirty import StrictVersion  # type: ignore
 from config_resolver.handler.ini import IniHandler
@@ -29,14 +31,17 @@ FileReadability = namedtuple(
     'FileReadability', 'is_readable filename reason version')
 
 
-def from_string(data: str, handler=None):
+def from_string(
+        data: str,
+        handler: Optional[Handler[Any]] = None
+) -> LookupResult:
     '''
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
     '''
-    handler = handler or IniHandler
+    handler_ = handler or IniHandler
     # TODO: This still does not do any version checking!
-    new_config = handler.from_string(data)
+    new_config = handler_.from_string(data)
     return LookupResult(new_config, LookupMetadata(
         '<unknown>',
         '<unknown>',
@@ -45,7 +50,12 @@ def from_string(data: str, handler=None):
     ))
 
 
-def get_config(app_name, group_name='', lookup_options=None, handler=None):
+def get_config(
+        app_name: str,
+        group_name: str = '',
+        lookup_options: Optional[Dict[str, Any]] = None,
+        handler: Optional[Type[Handler[Any]]] = None
+) -> LookupResult:
     '''
     Factory function to retrieve new config instances.
 
@@ -111,13 +121,13 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
     '''
-    handler = handler or IniHandler
+    concrete_handler = handler or IniHandler  # type: Type[Handler[Any]]
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
 
     default_options = {
-        'search_path': [],
-        'filename': handler.DEFAULT_FILENAME,
+        'search_path': '',
+        'filename': concrete_handler.DEFAULT_FILENAME,
         'require_load': False,
         'version': None,
         'secure': False,
@@ -125,10 +135,10 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
     if lookup_options:
         default_options.update(lookup_options)
 
-    secure = default_options['secure']
+    secure = cast(bool, default_options['secure'])
     require_load = default_options['require_load']
-    search_path = default_options['search_path']
-    filename = default_options['filename']
+    search_path = cast(str, default_options['search_path'])
+    filename = cast(str, default_options['filename'])
     filename = effective_filename(config_id, filename)
     requested_version = default_options['version']
     if requested_version:
@@ -136,20 +146,20 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
     else:
         version = None
 
-    loaded_files = []
+    loaded_files = []  # type: List[str]
 
-    search_path = effective_path(config_id, search_path)
+    search_path_ = effective_path(config_id, search_path)
 
     # Store the complete list of all inspected items
-    active_path = [join(_, filename) for _ in search_path]
+    active_path = [join(_, filename) for _ in search_path_]
 
-    output = handler.empty()
-    found_files = find_files(config_id, search_path, filename)
+    output = concrete_handler.empty()
+    found_files = find_files(config_id, search_path_, filename)
 
     current_version = version
     for filename in found_files:
         readability = is_readable(config_id, filename, current_version, secure,
-                                  handler)
+                                  concrete_handler)
         if not current_version and readability.version:
             # Automatically "lock-in" a version number if one is found.
             # This prevents loading a chain of config files with incompatible
@@ -163,7 +173,7 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
         if readability.is_readable:
             action = 'Updating' if loaded_files else 'Loading initial'
             log.info('%s config from %s', action, filename)
-            handler.update_from_file(output, filename)
+            concrete_handler.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
             log.warning('Skipping unreadable file %s (%s)', filename,
@@ -173,10 +183,10 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
         log.warning(
             "No config file named %s found! Search path was %r",
             filename,
-            search_path)
+            search_path_)
     elif not loaded_files and require_load:
         raise IOError("No config file named %s found! Search path "
-                      "was %r" % (filename, search_path))
+                      "was %r" % (filename, search_path_))
 
     return LookupResult(output, LookupMetadata(
         active_path,
@@ -187,7 +197,7 @@ def get_config(app_name, group_name='', lookup_options=None, handler=None):
 
 
 @lru_cache(5)
-def prefixed_logger(config_id):
+def prefixed_logger(config_id: ConfigID) -> Tuple[Logger, Filter]:
     '''
     Returns a log instance and prefix filter for a given group- & app-name pair.
 
@@ -207,7 +217,7 @@ def prefixed_logger(config_id):
     return log, prefix_filter
 
 
-def get_xdg_dirs(config_id):
+def get_xdg_dirs(config_id: ConfigID) -> List[str]:
     """
     Returns a list of paths specified by the XDG_CONFIG_DIRS environment
     variable or the appropriate default. See :ref:`xdg-spec` for details.
@@ -228,7 +238,7 @@ def get_xdg_dirs(config_id):
     return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
 
 
-def get_xdg_home(config_id):
+def get_xdg_home(config_id: ConfigID) -> str:
     """
     Returns the value specified in the XDG_CONFIG_HOME environment variable
     or the appropriate default. See :ref:`xdg-spec` for details.
@@ -241,7 +251,7 @@ def get_xdg_home(config_id):
     return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
 
 
-def effective_path(config_id, search_path=''):
+def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     """
     Returns a list of paths to search for config files in reverse order of
     precedence. In other words: the last path element will override the
@@ -293,7 +303,11 @@ def effective_path(config_id, search_path=''):
     return path
 
 
-def find_files(config_id, search_path=None, filename=None):
+def find_files(
+        config_id: ConfigID,
+        search_path: Optional[List[str]] = None,
+        filename: str = ''
+) -> Generator[str, None, None]:
     """
     Looks for files in default locations. Returns an iterator of filenames.
 
@@ -301,16 +315,17 @@ def find_files(config_id, search_path=None, filename=None):
     :param search_path: A list of paths to search for files.
     :param filename: The name of the file we search for.
     """
+    search_path_ = search_path or []
     config_filename = effective_filename(config_id, filename)
 
     # Next, use the resolved path to find the filenames. Keep track of
     # which files we loaded in order to inform the user.
-    for dirname in search_path:
+    for dirname in search_path_:
         conf_name = join(dirname, config_filename)
         yield conf_name
 
 
-def effective_filename(config_id, config_filename):
+def effective_filename(config_id: ConfigID, config_filename: str) -> str:
     """
     Returns the filename which is effectively used by the application. If
     overridden by an environment variable, it will return that filename.
@@ -331,7 +346,7 @@ def effective_filename(config_id, config_filename):
     return config_filename
 
 
-def env_name(config_id):
+def env_name(config_id: ConfigID) -> str:
     '''
     Return the name of the environment variable which contains the file-name to
     load.
@@ -339,7 +354,13 @@ def env_name(config_id):
     return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
 
 
-def is_readable(config_id, filename, version=None, secure=False, handler=None):
+def is_readable(
+        config_id: ConfigID,
+        filename: str,
+        version: Optional[StrictVersion] = None,
+        secure: bool = False,
+        handler: Optional[Type[Handler[Any]]] = None
+) -> FileReadability:
     """
     Check if ``filename`` can be read. Will return boolean which is True if
     the file can be read, False otherwise.
@@ -350,7 +371,7 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
     :param handler: The handler to be used to open and parse the file.
     """
     log, _ = prefixed_logger(config_id)
-    handler = handler or IniHandler
+    handler_ = handler or IniHandler  # type: Type[Handler[Any]]
 
     if not exists(filename):
         return FileReadability(False, filename, 'File not found', None)
@@ -361,7 +382,7 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
 
     # Check if the file is version-compatible with this instance.
     try:
-        config_instance = handler.from_filename(filename)
+        config_instance = handler_.from_filename(filename)
     except:  #  pylint: disable=bare-except
         log.critical("Unable to read %r", abspath(filename), exc_info=True)
         return FileReadability(
@@ -371,7 +392,7 @@ def is_readable(config_id, filename, version=None, secure=False, handler=None):
             None,
         )
 
-    instance_version = handler.get_version(config_instance)
+    instance_version = handler_.get_version(config_instance)
 
     if version and not instance_version:
         # version is set, so we MUST have a version in the file!
