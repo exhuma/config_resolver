@@ -12,7 +12,8 @@ from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, cast
 
-from config_resolver.dirty import StrictVersion  # type: ignore
+from packaging.version import Version
+
 from config_resolver.handler.ini import IniHandler
 
 from .exc import NoVersionError
@@ -142,7 +143,7 @@ def get_config(
     filename = effective_filename(config_id, filename)
     requested_version = default_options['version']
     if requested_version:
-        version = StrictVersion(requested_version)
+        version = Version(requested_version)
     else:
         version = None
 
@@ -357,7 +358,7 @@ def env_name(config_id: ConfigID) -> str:
 def is_readable(
         config_id: ConfigID,
         filename: str,
-        version: Optional[StrictVersion] = None,
+        version: Optional[Version] = None,
         secure: bool = False,
         handler: Optional[Type[Handler[Any]]] = None
 ) -> FileReadability:
@@ -402,8 +403,10 @@ def is_readable(
     elif version:
         # The user expected a certain version. We need to check the version in
         # the file and compare.
-        major, minor, _ = instance_version.version
-        expected_major, expected_minor, _ = version.version
+        major = instance_version.major
+        minor = instance_version.minor
+        expected_major = version.major
+        expected_minor = version.minor
         if expected_major != major:
             msg = 'Invalid major version number in %r. Expected %r, got %r!'
             log.error(

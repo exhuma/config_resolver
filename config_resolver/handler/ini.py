@@ -4,7 +4,7 @@ Handler for INI files
 
 from configparser import ConfigParser
 
-from config_resolver.dirty import StrictVersion  # type: ignore
+from packaging.version import Version
 
 from .base import Handler
 
@@ -33,12 +33,12 @@ class IniHandler(Handler[ConfigParser]):
         return parser
 
     @staticmethod
-    def get_version(config: ConfigParser) -> StrictVersion:
+    def get_version(config: ConfigParser) -> Version:
         if (not config.has_section('meta') or
                 not config.has_option('meta', 'version')):
             return None
         raw_value = config.get('meta', 'version')
-        parsed = StrictVersion(raw_value)
+        parsed = Version(raw_value)
         return parsed
 
     @staticmethod

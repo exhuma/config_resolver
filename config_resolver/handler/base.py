@@ -4,7 +4,7 @@ This module contains helpers for type hinting
 
 from typing import Any, Generic, TypeVar
 
-from config_resolver.dirty import StrictVersion  # type: ignore
+from packaging.version import Version
 
 TConfig = TypeVar("TConfig", bound=Any)  # pylint: disable=invalid-name
 
@@ -41,7 +41,7 @@ class Handler(Generic[TConfig]):
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def get_version(config: TConfig) -> StrictVersion:
+    def get_version(config: TConfig) -> Version:
         """
         Retrieve the parsed version number from a given config instance.
         """

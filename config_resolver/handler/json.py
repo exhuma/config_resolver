@@ -5,7 +5,7 @@ Handler for JSON files
 from json import load, loads
 from typing import Any, Dict
 
-from config_resolver.dirty import StrictVersion  # type: ignore
+from packaging.version import Version
 
 from .base import Handler
 
@@ -34,11 +34,11 @@ class JsonHandler(Handler[TJsonConfig]):
         return output  # type: ignore
 
     @staticmethod
-    def get_version(config: TJsonConfig) -> StrictVersion:
+    def get_version(config: TJsonConfig) -> Version:
         if 'meta' not in config or 'version' not in config['meta']:
             return None
         raw_value = config['meta']['version']
-        parsed = StrictVersion(raw_value)
+        parsed = Version(raw_value)
         return parsed
 
     @staticmethod
