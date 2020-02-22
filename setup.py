@@ -2,7 +2,8 @@ from setuptools import setup, find_packages
 
 PACKAGE = "config_resolver"
 NAME = "config_resolver"
-DESCRIPTION = "A small package to automatically find a configuration file."
+with open("README.rst") as fptr:
+    DESCRIPTION = fptr.read()
 AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
 
