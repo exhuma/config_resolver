@@ -14,31 +14,21 @@ PyPI
     https://pypi.python.org/pypi/config_resolver
 
 
-Rationale
-~~~~~~~~~
+``config_resolver`` provides a simple, yet flexible way to provide
+configuration to your applications. It follows the :ref:`XDG specification
+<xdg-spec>` for config file locations, and adds additional ways to override
+config locations. The aims of this package are:
 
-Many of the larger frameworks (not only web frameworks) offer their own
-configuration management. But it looks different everywhere. Both in code and
-in usage later on. Additionally, the operating system usually has some default,
-predictable place to look for configuration values. On Linux, this is ``/etc``
-and the `XDG Base Dir Spec
-<https://standards.freedesktop.org/basedir-spec/0.8/>`_ (This instance is based
-on 0.8 of this spec).
+* Provide a simple API
+* Follow well-known standards for config-file locations
+* Be as close to pure-Python as possible
+* Be framework agnostic
+* Allow custom configutaion types (``.ini`` and ``.json`` support is shipped by
+  default)
+* Allow to provide system-wide defaults but allow overriding of values for more
+  specific environments. These are (in increasing order of specificity):
 
-The code for finding these config files is always the same. But finding config
-files can be more interesting than that:
-
-* If config files contain passwords, the application should issue appropriate
-  warnings if it encounters an insecure file and refuse to load it.
-
-* The expected structure in the config file can be versioned (think: schema).
-  If an application is upgraded and expects new values to exist in an old
-  version file, it should notify the user.
-
-* It should be possible to override the configuration per installed instance,
-  even per execution.
-
-``config_resolver`` tackles all these challenges in a simple-to-use drop-in
-module. The module uses no additional external modules (no additional
-dependencies, pure Python) so it can be used in any application without adding
-unnecessary bloat.
+  1. System-wide configuration (potentially requiring root-access to modify)
+  2. User-level configuration (for all instances running as that user)
+  3. Current Working Directory configuration (for a running instance)
+  4. Per-Instance configuration

@@ -26,8 +26,9 @@ Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
 
 * Replace ``Config`` with ``get_config``
-* The result from the call to ``get_config`` now returns two objects: The
-  config instance and additional metadata.
+* The result from the call to ``get_config`` now returns a named-tuple with two
+  objects: The config instance (``.config``) and additional metadata
+  (``.meta``).
 * The following attributes moved to the meta-data object:
 
   * ``active_path``
