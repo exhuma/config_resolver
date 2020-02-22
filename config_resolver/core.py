@@ -141,11 +141,10 @@ def get_config(
     search_path = cast(str, default_options['search_path'])
     filename = cast(str, default_options['filename'])
     filename = effective_filename(config_id, filename)
-    requested_version = default_options['version']
+    requested_version = cast(str, default_options['version'])
+    version = None
     if requested_version:
         version = Version(requested_version)
-    else:
-        version = None
 
     loaded_files = []  # type: List[str]
 
@@ -400,7 +399,8 @@ def is_readable(
         raise NoVersionError(
             "The config option 'meta.version' is missing in {}. The "
             "application expects version {}!".format(filename, version))
-    elif version:
+
+    if version and instance_version:
         # The user expected a certain version. We need to check the version in
         # the file and compare.
         major = instance_version.major

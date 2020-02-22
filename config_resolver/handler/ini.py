@@ -3,6 +3,7 @@ Handler for INI files
 '''
 
 from configparser import ConfigParser
+from typing import Optional
 
 from packaging.version import Version
 
@@ -33,7 +34,7 @@ class IniHandler(Handler[ConfigParser]):
         return parser
 
     @staticmethod
-    def get_version(config: ConfigParser) -> Version:
+    def get_version(config: ConfigParser) -> Optional[Version]:
         if (not config.has_section('meta') or
                 not config.has_option('meta', 'version')):
             return None

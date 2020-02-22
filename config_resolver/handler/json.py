@@ -3,12 +3,11 @@ Handler for JSON files
 '''
 
 from json import load, loads
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from packaging.version import Version
 
 from .base import Handler
-
 
 TJsonConfig = Dict[str, Any]
 
@@ -34,7 +33,7 @@ class JsonHandler(Handler[TJsonConfig]):
         return output  # type: ignore
 
     @staticmethod
-    def get_version(config: TJsonConfig) -> Version:
+    def get_version(config: TJsonConfig) -> Optional[Version]:
         if 'meta' not in config or 'version' not in config['meta']:
             return None
         raw_value = config['meta']['version']

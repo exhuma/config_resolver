@@ -2,7 +2,7 @@
 This module contains helpers for type hinting
 """
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from packaging.version import Version
 
@@ -41,7 +41,7 @@ class Handler(Generic[TConfig]):
         raise NotImplementedError("Not yet implemented")
 
     @staticmethod
-    def get_version(config: TConfig) -> Version:
+    def get_version(config: TConfig) -> Optional[Version]:
         """
         Retrieve the parsed version number from a given config instance.
         """
