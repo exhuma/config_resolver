@@ -19,7 +19,8 @@ Release 5.0.0
   separation allows a custom handler to return any type without impacting the
   internal logic of ``config_resolver``.
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
-  XDG standar ``~/.config/group-name/app-name``.
+  XDG standard ``~/.config/group-name/app-name``.
+* Fully type-hinted
 
 Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
