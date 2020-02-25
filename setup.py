@@ -20,6 +20,9 @@ setup(
     license="MIT",
     include_package_data=True,
     packages=find_packages(),
+    install_requires=[
+        "packaging"
+    ],
     package_data = {
         'config_resolver': ['py.typed'],
     },
