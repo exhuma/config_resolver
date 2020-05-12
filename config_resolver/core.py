@@ -110,7 +110,7 @@ def get_config(
     **require_load** (default=``False``)
         A boolean value which determines what happens if *no* file was loaded.
         If this is set to ``True`` the call to ``get_config`` will raise an
-        exception if no file was found. Otherwise it will log a warning.
+        exception if no file was found. Otherwise it will log a debug message.
 
     **version** (default=``None``)
         This can be a string in the form ``<major>.<minor>``. If specified, the
@@ -186,11 +186,11 @@ def get_config(
             concrete_handler.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
-            log.warning('Skipping unreadable file %s (%s)', filename,
-                        readability.reason)
+            log.debug('Skipping unreadable file %s (%s)', filename,
+                      readability.reason)
 
     if not loaded_files and not require_load:
-        log.warning(
+        log.debug(
             "No config file named %s found! Search path was %r",
             filename,
             search_path_)
