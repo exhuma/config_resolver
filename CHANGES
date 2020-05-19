@@ -22,6 +22,7 @@ Release 5.0.0
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
   XDG standard ``~/.config/group-name/app-name``.
 * Fully type-hinted
+* Slightly less aggressive logging (as of 5.0.1 by Vince Broz)
 
 Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
