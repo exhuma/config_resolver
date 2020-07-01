@@ -1,3 +1,14 @@
+Release 4.3.7
+-------------
+
+Fixed
+~~~~~
+
+* Fix changelog in generated docs
+* Don't log a warning when loading a config-file with a compatible (but
+  different) version.
+
+
 Release 4.3.6
 -------------
 

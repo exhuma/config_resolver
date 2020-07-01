@@ -1,3 +1,76 @@
+Release 4.3.7
+-------------
+
+Fixed
+~~~~~
+
+* Fix changelog in generated docs
+* Don't log a warning when loading a config-file with a compatible (but
+  different) version.
+
+
+Release 4.3.6
+-------------
+
+Fixed
+~~~~~
+
+* If a config-file contains any parser errors, that file is skipped while
+  logging a "critical" error. This prevents crashes caused by broken configs.
+
+
+Release 4.3.5
+-------------
+
+Fixed
+~~~~~
+
+* The deprecation warning about the *filename* argument stated the exact
+  opposite to what it should have said :( This is fixed now
+
+
+Release 4.3.4
+-------------
+
+Fixed
+~~~~~
+
+* Don't emit deprecation warnings when the code is called as expected.
+
+
+Release 4.3.3
+-------------
+
+Fixed
+~~~~~
+
+* Fixed a regression introduced by 4.3.2
+
+
+Release 4.3.2
+-------------
+
+Fixed
+~~~~~
+
+* Replace hand-crafted code with ``stack_level`` information for deprecation
+  warnings
+
+
+Release 4.3.1.post1
+-------------------
+
+Fixed
+~~~~~
+
+* Fixed type hints
+* Arguments ``require_load`` and ``version`` are no longer ignored in
+  ``get_config``
+
+
+Release 4.3.1
+-------------
+
 Fixed
 ~~~~~
 
