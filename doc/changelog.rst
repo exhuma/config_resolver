@@ -44,6 +44,178 @@ Upgrading from 4.x
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 
+Release 4.3.7
+-------------
+
+Fixed
+~~~~~
+
+* Fix changelog in generated docs
+* Don't log a warning when loading a config-file with a compatible (but
+  different) version.
+
+
+Release 4.3.6
+-------------
+
+Fixed
+~~~~~
+
+* If a config-file contains any parser errors, that file is skipped while
+  logging a "critical" error. This prevents crashes caused by broken configs.
+
+
+Release 4.3.5
+-------------
+
+Fixed
+~~~~~
+
+* The deprecation warning about the *filename* argument stated the exact
+  opposite to what it should have said :( This is fixed now
+
+
+Release 4.3.4
+-------------
+
+Fixed
+~~~~~
+
+* Don't emit deprecation warnings when the code is called as expected.
+
+
+Release 4.3.3
+-------------
+
+Fixed
+~~~~~
+
+* Fixed a regression introduced by 4.3.2
+
+
+Release 4.3.2
+-------------
+
+Fixed
+~~~~~
+
+* Replace hand-crafted code with ``stack_level`` information for deprecation
+  warnings
+
+
+Release 4.3.1.post1
+-------------------
+
+Fixed
+~~~~~
+
+* Fixed type hints
+* Arguments ``require_load`` and ``version`` are no longer ignored in
+  ``get_config``
+
+
+Release 4.3.1
+-------------
+
+Fixed
+~~~~~
+
+* Fixed return-value of ``get_config``. It now properly returns the same return
+  value as config-resolver 5. New deprecation warnings have been added as well.
+
+  .. warning::
+    This will **BREAK** your code as ``get_config`` now returns a tuple, with
+    the config instance being the first element! This should never have entered
+    like this in the 4.x branch. Sorry about that.
+
+* Fixed missing ``NoSectionError`` and ``NoOptionError`` imports (regression
+  from ``4.2.5`` via commit ``54168cd``)
+
+
+Release 4.3.0
+-------------
+
+Added
+~~~~~
+
+* The new "transition" function ``get_config`` now also honors the
+  ``secure`` flag in ``lookup_options``.
+
+
+Release 4.2.5.post2
+-------------------
+
+Fixes
+~~~~~
+
+* ``filename`` can now be passed as direct argument to ``get_config``
+* Don't warn if the config is retrieved correctly
+
+
+Release 4.2.5.post1
+-------------------
+
+Fixes
+~~~~~
+
+* Improved warning detail in deprecation messages.
+
+
+Release 4.2.5
+-------------
+
+Fixes
+~~~~~
+
+* Change from a module-only distrbution to a package (for PEP-561)
+* Make package PEP-561 compliant
+* Add transition function ``config_resolver.get_config`` for a smoother upgrade
+  to v5.0 in the future.
+* Add deprecation warnings with details on how to change the code for a smooth
+  transition to v5.0
+
+
+Release 4.2.4
+-------------
+
+Fixes
+~~~~~
+
+* Improve code quality.
+* Improve log message for invalid config version numbers.
+
+
+Release 4.2.3
+-------------
+
+Fixes
+~~~~~
+
+* Unit tests fixed
+* Added missing LICENSE file
+* Log messages will now show the complete version string
+* Auto-detect version number if none is specifiec in the ``[meta]`` section.
+* Fix travis CI pipeline
+
+
+Release 4.2.2
+-------------
+
+Fixes
+~~~~~
+
+* Python 2/3 class-inheritance fixed.
+
+
+Release 4.2.1
+-------------
+
+Fixes
+~~~~~
+
+* Log message prefixes no longer added multiple times
+
+
 Release 4.2.0
 -------------
 
