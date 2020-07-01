@@ -55,7 +55,7 @@ def get_config(
         app_name: str,
         group_name: str = '',
         lookup_options: Optional[Dict[str, Any]] = None,
-        handler: Optional[Type[Handler[Any]]] = None
+        handler: "Optional[Type[Handler[Any]]]" = None
 ) -> LookupResult:
     """
     Factory function to retrieve new config instances.
@@ -392,7 +392,7 @@ def is_readable(
         filename: str,
         version: Optional[Version] = None,
         secure: bool = False,
-        handler: Optional[Type[Handler[Any]]] = None
+        handler: "Optional[Type[Handler[Any]]]" = None
 ) -> FileReadability:
     """
     Check if ``filename`` can be read. Will return boolean which is True if
