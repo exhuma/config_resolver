@@ -342,19 +342,19 @@ class FunctionalityTests(TestBase):
 
     def test_mismatching_minor(self):
         Config('hello', 'world', search_path='testdata/versioned',
-               version='2.0')
+               version='2.3')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.WARNING,
+            logging.ERROR,
             'Mismatching minor version number')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.WARNING,
-            '2.1')
+            logging.ERROR,
+            '2.3')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.WARNING,
-            '2.0')
+            logging.ERROR,
+            '2.1')
 
     def test_mixed_version_load(self):
         """
@@ -470,10 +470,10 @@ class FunctionalityTests(TestBase):
         When getting a version number mismatch, the filename should be logged!
         """
         Config('hello', 'world', search_path='testdata/versioned',
-               version='2.0')
+               version='2.3')
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
-            logging.WARNING,
+            logging.ERROR,
             'testdata/versioned/app.ini')
 
     def test_filename_in_log_major(self):

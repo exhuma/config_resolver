@@ -342,14 +342,14 @@ class Config(ConfigResolverBase):  # pylint: disable = too-many-ancestors
                     file_version)
                 return False
 
-            if expected_minor != minor:
-                self._log.warning(
+            if expected_minor > minor:
+                self._log.error(
                     'Mismatching minor version number in %r. '
                     'Expected %r, got %r!',
                     abspath(filename),
                     str(self.version),
                     file_version)
-                return True
+                return False
         return True
 
     def get(self, section, option, **kwargs):  # type: ignore
