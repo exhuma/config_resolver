@@ -206,6 +206,15 @@ def get_config(
     ))
 
 
+def _is_world_readable(filename: str) -> bool:
+    """
+    Returns True if the given file is readable by everyone on the system (has
+    readable flags for "group" and "other"), False otherwise
+    """
+    mode = get_stat(filename).st_mode
+    return bool((mode & stat.S_IRGRP) or (mode & stat.S_IROTH))
+
+
 @lru_cache(5)
 def prefixed_logger(
         config_id: Optional[ConfigID]
@@ -460,8 +469,7 @@ def is_readable(
             unreadable_reason = msg
 
     if insecure_readable and secure:
-        mode = get_stat(filename).st_mode
-        if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
+        if _is_world_readable(filename):
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
             return FileReadability(False, filename, msg, instance_version)

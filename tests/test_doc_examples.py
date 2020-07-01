@@ -7,7 +7,9 @@ documentation is not lying, This test-case takes care of that.
 '''
 
 import unittest
-from tests.helpers import execute, environment
+
+from config_resolver.core import _is_world_readable
+from tests.helpers import environment, execute
 
 
 class TestDocExamples(unittest.TestCase):
@@ -23,6 +25,10 @@ class TestDocExamples(unittest.TestCase):
 
     def test_example_02(self):
         filename = 'doc/examples/example02.py'
+        if _is_world_readable(filename):
+            self.skipTest(
+                "The file %r is world-readable. "
+                "Change its mode to 600 to enable this test.")
         with environment(
                 ACMECORP_BIRD_FEEDER_PATH='tests/examples/configs',
                 ACMECORP_BIRD_FEEDER_FILENAME='secure.ini'):
