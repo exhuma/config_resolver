@@ -212,7 +212,8 @@ def _is_world_readable(filename: str) -> bool:
     readable flags for "group" and "other"), False otherwise
     """
     mode = get_stat(filename).st_mode
-    return bool((mode & stat.S_IRGRP) or (mode & stat.S_IROTH))
+    matching_modes = (mode & stat.S_IRGRP) or (mode & stat.S_IROTH)
+    return bool(matching_modes)
 
 
 @lru_cache(5)
