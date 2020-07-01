@@ -451,7 +451,7 @@ def is_readable(
             unreadable_reason = msg
         elif expected_minor > minor:
             msg = 'Mismatching minor version number in %r. Expected %r, got %r!'
-            log.error(
+            log.warning(
                 msg,
                 abspath(filename),
                 str(version),
