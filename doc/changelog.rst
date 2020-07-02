@@ -1,6 +1,19 @@
 Changelog
 =========
 
+Release 5.0.1-5.0.2
+-------------------
+
+Support
+~~~~~~~
+
+* Slightly less aggressive logging (as of 5.0.1 by Vince Broz)
+* Even less aggressive logging (as of 5.0.2 by Michel Albert)
+* Compatibility with Python 3.5.2
+* Improved unit-test on fresh clone (skip test with incorrect file-permissions
+  as they are not stored in git)
+
+
 Release 5.0.0
 -------------
 
@@ -25,7 +38,6 @@ Release 5.0.0
 * Dropped the deprectaed lookup in ``~/.group-name/app-name`` in favor of the
   XDG standard ``~/.config/group-name/app-name``.
 * Fully type-hinted
-* Slightly less aggressive logging (as of 5.0.1 by Vince Broz)
 
 Upgrading from 4.x
 ~~~~~~~~~~~~~~~~~~
@@ -43,6 +55,7 @@ Upgrading from 4.x
 * Return types for INI files is now a standard library instance of
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
+
 
 Release 4.3.8
 -------------
@@ -64,6 +77,7 @@ Fixed
    deciding whether to log a warning or not, Before 4.3.7 we always emitted a
    warning whenever the minor-version was *different*. Now we only emit one
    when the minor version is too low in the loaded config-file.
+
 
 
 Release 4.3.7
