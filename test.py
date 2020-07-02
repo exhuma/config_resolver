@@ -345,15 +345,15 @@ class FunctionalityTests(TestBase):
                version='2.3')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.ERROR,
+            logging.WARNING,
             'Mismatching minor version number')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.ERROR,
+            logging.WARNING,
             '2.3')
         self.catcher.assert_contains(
             'config_resolver.hello.world',
-            logging.ERROR,
+            logging.WARNING,
             '2.1')
 
     def test_mixed_version_load(self):
@@ -473,7 +473,7 @@ class FunctionalityTests(TestBase):
                version='2.3')
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
-            logging.ERROR,
+            logging.WARNING,
             'testdata/versioned/app.ini')
 
     def test_filename_in_log_major(self):
