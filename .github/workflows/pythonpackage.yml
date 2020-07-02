@@ -29,7 +29,8 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest pytest-coverage
-        pytest
+        chmod 600 tests/examples/configs/secure.ini
+        pytest -rsf
 
   build:
 
