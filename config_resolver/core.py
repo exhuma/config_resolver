@@ -466,7 +466,7 @@ def is_readable(
                 abspath(filename),
                 str(version),
                 instance_version)
-            insecure_readable = False
+            insecure_readable = True
             unreadable_reason = msg
 
     if insecure_readable and secure:

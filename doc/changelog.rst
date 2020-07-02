@@ -44,6 +44,28 @@ Upgrading from 4.x
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
 
+Release 4.3.8
+-------------
+
+Fixed
+~~~~~
+
+* Fixed a regression introduced in 4.3.7 which caused log-files no longer to be
+  loaded if ``meta.version`` had a mismatching minor-version
+
+
+.. note::
+
+   While it may make sense to refuse loading config-version 1.2 when the app
+   asks for 1.4 (larger minor-version, same major-version), this would
+   introduce a backwards incompatibility and will break some apps using this.
+
+   This fix reverts that change from 4.3.7 but keeps the change on the test
+   deciding whether to log a warning or not, Before 4.3.7 we always emitted a
+   warning whenever the minor-version was *different*. Now we only emit one
+   when the minor version is too low in the loaded config-file.
+
+
 Release 4.3.7
 -------------
 
