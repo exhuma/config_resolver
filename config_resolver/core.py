@@ -55,7 +55,7 @@ def get_config(
         app_name: str,
         group_name: str = '',
         lookup_options: Optional[Dict[str, Any]] = None,
-        handler: Optional[Type[Handler[Any]]] = None
+        handler: "Optional[Type[Handler[Any]]]" = None
 ) -> LookupResult:
     """
     Factory function to retrieve new config instances.
@@ -204,6 +204,16 @@ def get_config(
         config_id,
         prefix_filter
     ))
+
+
+def _is_world_readable(filename: str) -> bool:
+    """
+    Returns True if the given file is readable by everyone on the system (has
+    readable flags for "group" and "other"), False otherwise
+    """
+    mode = get_stat(filename).st_mode
+    matching_modes = (mode & stat.S_IRGRP) or (mode & stat.S_IROTH)
+    return bool(matching_modes)
 
 
 @lru_cache(5)
@@ -392,7 +402,7 @@ def is_readable(
         filename: str,
         version: Optional[Version] = None,
         secure: bool = False,
-        handler: Optional[Type[Handler[Any]]] = None
+        handler: "Optional[Type[Handler[Any]]]" = None
 ) -> FileReadability:
     """
     Check if ``filename`` can be read. Will return boolean which is True if
@@ -460,8 +470,7 @@ def is_readable(
             unreadable_reason = msg
 
     if insecure_readable and secure:
-        mode = get_stat(filename).st_mode
-        if (mode & stat.S_IRGRP) or (mode & stat.S_IROTH):
+        if _is_world_readable(filename):
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
             return FileReadability(False, filename, msg, instance_version)

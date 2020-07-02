@@ -28,7 +28,9 @@ jobs:
         pylint --reports=y --exit-zero config_resolver
     - name: Test with pytest
       run: |
-        pip install pytest
+        pip install pytest pytest-coverage
+        chmod 600 tests/examples/configs/secure.ini
+        pytest -rsf
 
   build:
 
