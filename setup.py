@@ -1,6 +1,6 @@
 import sys
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 PACKAGE = "config_resolver"
 NAME = "config_resolver"
@@ -9,7 +9,9 @@ AUTHOR = "Michel Albert"
 AUTHOR_EMAIL = "michel@albert.lu"
 VERSION = open("config_resolver/version.txt").read().strip()
 
-DEPENDENCIES = []  # type: ignore
+DEPENDENCIES = [
+    "setuptools != 50.0.0"
+]
 if sys.version_info < (3, 0):
     DEPENDENCIES.append('typing')
 
@@ -25,7 +27,6 @@ setup(
     include_package_data=True,
     packages=['config_resolver'],
     install_requires=DEPENDENCIES,
-    requires=DEPENDENCIES,
     package_data={
         'config_resolver': ['py.typed'],
     },
