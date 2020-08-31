@@ -1,3 +1,13 @@
+Release 4.3.9
+-------------
+
+Fixed
+~~~~~
+
+* Blacklist setuptools 50.0.0 (See
+  https://github.com/pypa/setuptools/issues/2356)
+
+
 Release 4.3.8
 -------------
 
