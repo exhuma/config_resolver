@@ -1,5 +1,5 @@
 atomicwrites==1.4.0
-attrs==19.3.0
+attrs==21.1.0
 more-itertools==8.4.0
 pluggy==0.13.0
 py==1.9.0
