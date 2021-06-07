@@ -8,7 +8,7 @@ When requesting a config-instance using
 :term:`file-handler` using the ``handler`` keyword arg. For example::
 
     from config_resolver import get_config
-    from config_resolver.handlers.json import JsonHandler
+    from config_resolver.handler.json import JsonHandler
 
     result = get_config('foo', 'bar', handler=JsonHandler)
 
