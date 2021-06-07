@@ -14,7 +14,7 @@ and one function to create a config from a text-string:
 
 A simple usage looks like this::
 
-    from config_resolver imoprt get_config
+    from config_resolver import get_config
     result = get_config('bird_feeder', 'acmecorp')
     cfg = result.config  # The config instance (its type depends on the handler)
     meta = result.meta  # Metadata for the loading-process

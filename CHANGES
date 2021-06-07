@@ -1,11 +1,12 @@
-Release 5.0.1-5.0.2
--------------------
+Release 5.0.1-5.0.2.post1
+-------------------------
 
 Support
 ~~~~~~~
 
+* Fix typos in code examples in docs (as of 5.0.2.post1)
+* Even less aggressive logging (as of 5.0.2)
 * Slightly less aggressive logging (as of 5.0.1 by Vince Broz)
-* Even less aggressive logging (as of 5.0.2 by Michel Albert)
 * Compatibility with Python 3.5.2
 * Improved unit-test on fresh clone (skip test with incorrect file-permissions
   as they are not stored in git)
