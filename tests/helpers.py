@@ -2,21 +2,21 @@
 Helpers for unit-tests
 """
 
-from contextlib import contextmanager
-import os
 import logging
+import os
 import re
+from contextlib import contextmanager
 
 __unittest = True  # Magic value to hide stack-traces in unit-test output
 
 
 def execute(filename):
-    '''
+    """
     Execute the python module in *filename* and return the resulting globals.
-    '''
+    """
     with open(filename) as fptr:
         source = fptr.read()
-    ast = compile(source, filename, 'exec')
+    ast = compile(source, filename, "exec")
     globals_ = {}
     exec(ast, globals_)
     return globals_
@@ -52,7 +52,7 @@ class TestableHandler(logging.Handler):
     """
 
     def __init__(self, *args, **kwargs):
-        super(TestableHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.records = []
 
     def emit(self, record):
@@ -63,12 +63,12 @@ class TestableHandler(logging.Handler):
 
     def assert_contains(self, logger, level, needle):
         if not self.contains(logger, level, needle):
-            msg = '%s did not contain a message with %r and level %r'
+            msg = "%s did not contain a message with %r and level %r"
             raise AssertionError(msg % (logger, needle, level))
 
     def assert_contains_regex(self, logger, level, needle):
         if not self.contains(logger, level, needle, is_regex=True):
-            msg = '%s did not contain a message matching %r and level %r'
+            msg = "%s did not contain a message matching %r and level %r"
             raise AssertionError(msg % (logger, needle, level))
 
     def contains(self, logger, level, message, is_regex=False):
@@ -95,6 +95,3 @@ class TestableHandler(logging.Handler):
 
     def reset(self):
         del self.records[:]
-
-
-
