@@ -1,0 +1,10 @@
+{
+	"files.watcherExclude": {
+		"**/env/**": true
+	},
+	"editor.rulers": [
+		80
+	],
+	"python.analysis.typeCheckingMode": "strict",
+	"python.formatting.provider": "black"
+}
