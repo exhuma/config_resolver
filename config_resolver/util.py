@@ -16,9 +16,10 @@ class PrefixFilter(Filter):
     :param separator: A string to put between the prefix and the original log
                       message.
     """
+
     # pylint: disable = too-few-public-methods
 
-    def __init__(self, prefix: str, separator: str = ' ') -> None:
+    def __init__(self, prefix: str, separator: str = " ") -> None:
         super().__init__()
         self._prefix = prefix
         self._separator = separator
@@ -33,13 +34,16 @@ class PrefixFilter(Filter):
         # ``_separator`` member. They would wrongly be assumed to be the same.
         # I'll assume this won't happen for now.
         # pylint: disable = protected-access
-        return (self.__class__.__name__ == other.__class__.__name__ and  # type: ignore
-                other._prefix == self._prefix and
-                other._separator == self._separator)
+        return (
+            self.__class__.__name__ == other.__class__.__name__
+            and other._prefix == self._prefix  # type: ignore
+            and other._separator == self._separator
+        )
 
     def __repr__(self) -> str:
-        return 'PrefixFilter(prefix={!r}, separator={!r}>'.format(
-            self._prefix, self._separator)
+        return "PrefixFilter(prefix={!r}, separator={!r}>".format(
+            self._prefix, self._separator
+        )
 
     def filter(self, record: LogRecord) -> bool:
         # pylint: disable = missing-docstring

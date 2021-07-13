@@ -17,7 +17,7 @@ class Handler(Generic[TConfig]):
 
     #: The filename that is used when the user did not specify a filename when
     #: retrieving the config instance
-    DEFAULT_FILENAME = 'unknown'
+    DEFAULT_FILENAME = "unknown"
 
     @staticmethod
     def empty() -> TConfig:

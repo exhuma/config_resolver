@@ -4,13 +4,22 @@ Core functionality of :py:mod:`config_resolver`
 
 import logging
 import stat
-from collections import namedtuple
 from functools import lru_cache
 from logging import Filter, Logger
 from os import getcwd, getenv, pathsep
 from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
-from typing import Any, Dict, Generator, List, Optional, Tuple, Type, cast
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+)
 
 from packaging.version import Version
 
@@ -20,21 +29,33 @@ from .exc import NoVersionError
 from .handler.base import Handler
 from .util import PrefixFilter
 
-ConfigID = namedtuple('ConfigID', 'group app')
-LookupResult = namedtuple('LookupResult', 'config meta')
-LookupMetadata = namedtuple('LookupMetadata', [
-    'active_path',
-    'loaded_files',
-    'config_id',
-    'prefix_filter'
-])
-FileReadability = namedtuple(
-    'FileReadability', 'is_readable filename reason version')
+
+class ConfigID(NamedTuple):
+    group: str
+    app: str
+
+
+class LookupMetadata(NamedTuple):
+    active_path: List[str]
+    loaded_files: List[str]
+    config_id: ConfigID
+    prefix_filter: Optional[Filter]
+
+
+class LookupResult(NamedTuple):
+    config: Any
+    meta: LookupMetadata
+
+
+class FileReadability(NamedTuple):
+    is_readable: bool
+    filename: str
+    reason: str
+    version: Optional[Version]
 
 
 def from_string(
-        data: str,
-        handler: Optional[Handler[Any]] = None
+    data: str, handler: Optional[Handler[Any]] = None
 ) -> LookupResult:
     """
     Load a config from the string value in *data*. *handler* can be used to
@@ -43,19 +64,22 @@ def from_string(
     handler_ = handler or IniHandler
     # TODO: This still does not do any version checking!
     new_config = handler_.from_string(data)
-    return LookupResult(new_config, LookupMetadata(
-        '<unknown>',
-        '<unknown>',
-        ConfigID('<unknown>', '<unknown>'),
-        None
-    ))
+    return LookupResult(
+        new_config,
+        LookupMetadata(
+            ["<unknown>"],
+            ["<unknown>"],
+            ConfigID("<unknown>", "<unknown>"),
+            None,
+        ),
+    )
 
 
 def get_config(
-        app_name: str,
-        group_name: str = '',
-        lookup_options: Optional[Dict[str, Any]] = None,
-        handler: "Optional[Type[Handler[Any]]]" = None
+    app_name: str,
+    group_name: str = "",
+    lookup_options: Optional[Dict[str, Any]] = None,
+    handler: "Optional[Type[Handler[Any]]]" = None,
 ) -> LookupResult:
     """
     Factory function to retrieve new config instances.
@@ -132,26 +156,26 @@ def get_config(
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
     """
-    concrete_handler = handler or IniHandler  # type: Type[Handler[Any]]
+    concrete_handler: Type[Handler[Any]] = handler or IniHandler
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
 
     default_options = {
-        'search_path': '',
-        'filename': concrete_handler.DEFAULT_FILENAME,
-        'require_load': False,
-        'version': None,
-        'secure': False,
+        "search_path": "",
+        "filename": concrete_handler.DEFAULT_FILENAME,
+        "require_load": False,
+        "version": None,
+        "secure": False,
     }
     if lookup_options:
         default_options.update(lookup_options)
 
-    secure = cast(bool, default_options['secure'])
-    require_load = default_options['require_load']
-    search_path = cast(str, default_options['search_path'])
-    filename = cast(str, default_options['filename'])
+    secure = cast(bool, default_options["secure"])
+    require_load = default_options["require_load"]
+    search_path = cast(str, default_options["search_path"])
+    filename = cast(str, default_options["filename"])
     filename = effective_filename(config_id, filename)
-    requested_version = cast(str, default_options['version'])
+    requested_version = cast(str, default_options["version"])
     version = None
     if requested_version:
         version = Version(requested_version)
@@ -168,42 +192,48 @@ def get_config(
 
     current_version = version
     for filename in found_files:
-        readability = is_readable(config_id, filename, current_version, secure,
-                                  concrete_handler)
+        readability = is_readable(
+            config_id, filename, current_version, secure, concrete_handler
+        )
         if not current_version and readability.version:
             # Automatically "lock-in" a version number if one is found.
             # This prevents loading a chain of config files with incompatible
             # version numbers!
-            log.info('%r contains a version number, but the config '
-                     'instance was not created with a version '
-                     'restriction. Will set version number to "%s" to '
-                     'prevent accidents!',
-                     filename, readability.version)
+            log.info(
+                "%r contains a version number, but the config "
+                "instance was not created with a version "
+                'restriction. Will set version number to "%s" to '
+                "prevent accidents!",
+                filename,
+                readability.version,
+            )
             current_version = readability.version
         if readability.is_readable:
-            action = 'Updating' if loaded_files else 'Loading initial'
-            log.info('%s config from %s', action, filename)
+            action = "Updating" if loaded_files else "Loading initial"
+            log.info("%s config from %s", action, filename)
             concrete_handler.update_from_file(output, filename)
             loaded_files.append(filename)
         else:
-            log.debug('Skipping unreadable file %s (%s)', filename,
-                      readability.reason)
+            log.debug(
+                "Skipping unreadable file %s (%s)", filename, readability.reason
+            )
 
     if not loaded_files and not require_load:
         log.debug(
             "No config file named %s found! Search path was %r",
             filename,
-            search_path_)
+            search_path_,
+        )
     elif not loaded_files and require_load:
-        raise IOError("No config file named %s found! Search path "
-                      "was %r" % (filename, search_path_))
+        raise OSError(
+            "No config file named %s found! Search path "
+            "was %r" % (filename, search_path_)
+        )
 
-    return LookupResult(output, LookupMetadata(
-        active_path,
-        loaded_files,
-        config_id,
-        prefix_filter
-    ))
+    return LookupResult(
+        output,
+        LookupMetadata(active_path, loaded_files, config_id, prefix_filter),
+    )
 
 
 def _is_world_readable(filename: str) -> bool:
@@ -218,9 +248,9 @@ def _is_world_readable(filename: str) -> bool:
 
 @lru_cache(5)
 def prefixed_logger(
-        config_id: Optional[ConfigID]
+    config_id: Optional[ConfigID],
 ) -> Tuple[Logger, Optional[Filter]]:
-    '''
+    """
     Returns a log instance and prefix filter for a given group- & app-name pair.
 
     It applies a filter to the logger which prefixes the log messages with
@@ -228,15 +258,16 @@ def prefixed_logger(
 
     The call to this function is cached to ensure we only have one instance in
     memory.
-    '''
+    """
     if config_id is None:
-        log = logging.getLogger('config_resolver')
+        log = logging.getLogger("config_resolver")
         return log, None
-    log = logging.getLogger('config_resolver.{}.{}'.format(
-        config_id.group,
-        config_id.app))
-    prefix_filter = PrefixFilter('group={}:app={}'.format(
-        config_id.group, config_id.app), separator=':')
+    log = logging.getLogger(
+        "config_resolver.{}.{}".format(config_id.group, config_id.app)
+    )
+    prefix_filter = PrefixFilter(
+        "group={}:app={}".format(config_id.group, config_id.app), separator=":"
+    )
     if prefix_filter not in log.filters:
         log.addFilter(prefix_filter)
     return log, prefix_filter
@@ -253,14 +284,14 @@ def get_xdg_dirs(config_id: ConfigID) -> List[str]:
     The value in *config_id* is used to determine the sub-folder structure.
     """
     log, _ = prefixed_logger(config_id)
-    config_dirs = getenv('XDG_CONFIG_DIRS', '')
+    config_dirs = getenv("XDG_CONFIG_DIRS", "")
     if config_dirs:
-        log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
-        output = []
-        for path in reversed(config_dirs.split(':')):
+        log.debug("XDG_CONFIG_DIRS is set to %r", config_dirs)
+        output: List[str] = []
+        for path in reversed(config_dirs.split(":")):
             output.append(join(path, config_id.group, config_id.app))
         return output
-    return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
+    return [f"/etc/xdg/{config_id.group}/{config_id.app}"]
 
 
 def get_xdg_home(config_id: ConfigID) -> str:
@@ -269,14 +300,14 @@ def get_xdg_home(config_id: ConfigID) -> str:
     or the appropriate default. See :ref:`xdg-spec` for details.
     """
     log, _ = prefixed_logger(config_id)
-    config_home = getenv('XDG_CONFIG_HOME', '')
+    config_home = getenv("XDG_CONFIG_HOME", "")
     if config_home:
-        log.debug('XDG_CONFIG_HOME is set to %r', config_home)
+        log.debug("XDG_CONFIG_HOME is set to %r", config_home)
         return expanduser(join(config_home, config_id.group, config_id.app))
-    return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
+    return expanduser(f"~/.config/{config_id.group}/{config_id.app}")
 
 
-def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
+def effective_path(config_id: ConfigID, search_path: str = "") -> List[str]:
     """
     Returns a list of paths to search for config files in order of
     increasing precedence: the last item in the list will override values of
@@ -294,7 +325,7 @@ def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     will be used instead of *anything* found previously (XDG paths,
     ``search_path`` value) unless the value is prefixed with a ``+`` sign. In
     that case it will be *appended* to the end of the list.
-    
+
     Examples::
 
         >>> # Search the default XDG paths (and the CWD)
@@ -313,43 +344,51 @@ def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     log, _ = prefixed_logger(config_id)
 
     # default search path
-    path = (['/etc/%s/%s' % (config_id.group, config_id.app)] +
-            get_xdg_dirs(config_id) +
-            [get_xdg_home(config_id),
-             join(getcwd(), '.{}'.format(config_id.group), config_id.app)])
+    path = (
+        [f"/etc/{config_id.group}/{config_id.app}"]
+        + get_xdg_dirs(config_id)
+        + [
+            get_xdg_home(config_id),
+            join(getcwd(), f".{config_id.group}", config_id.app),
+        ]
+    )
 
     # If a path was passed directly to this instance, override the path.
     if search_path:
         path = search_path.split(pathsep)
 
     # Next, consider the environment variables...
-    env_path_name = "%s_%s_PATH" % (
-        config_id.group.upper(), config_id.app.upper())
+    env_path_name = "{}_{}_PATH".format(
+        config_id.group.upper(), config_id.app.upper()
+    )
     env_path = getenv(env_path_name)
 
-    if env_path and env_path.startswith('+'):
+    if env_path and env_path.startswith("+"):
         # If prefixed with a '+', append the path elements
         additional_paths = env_path[1:].split(pathsep)
-        log.info('Search path extended with %r by the environment '
-                 'variable %s.',
-                 env_path,
-                 env_path_name)
+        log.info(
+            "Search path extended with %r by the environment " "variable %s.",
+            env_path,
+            env_path_name,
+        )
         path.extend(additional_paths)
     elif env_path:
         # Otherwise, override again. This takes absolute precedence.
-        log.info("Configuration search path was overridden with "
-                 "%r by the environment variable %r.",
-                 env_path,
-                 env_path_name)
+        log.info(
+            "Configuration search path was overridden with "
+            "%r by the environment variable %r.",
+            env_path,
+            env_path_name,
+        )
         path = env_path.split(pathsep)
 
     return path
 
 
 def find_files(
-        config_id: ConfigID,
-        search_path: Optional[List[str]] = None,
-        filename: str = ''
+    config_id: ConfigID,
+    search_path: Optional[List[str]] = None,
+    filename: str = "",
 ) -> Generator[str, None, None]:
     """
     Looks for files in default locations. Returns an iterator of filenames.
@@ -380,29 +419,31 @@ def effective_filename(config_id: ConfigID, config_filename: str) -> str:
 
     env_filename = getenv(env_name(config_id))
     if env_filename:
-        log.info('Configuration filename was overridden with %r '
-                 'by the environment variable %s.',
-                 env_filename,
-                 env_name(config_id))
+        log.info(
+            "Configuration filename was overridden with %r "
+            "by the environment variable %s.",
+            env_filename,
+            env_name(config_id),
+        )
         config_filename = env_filename
 
     return config_filename
 
 
 def env_name(config_id: ConfigID) -> str:
-    '''
+    """
     Return the name of the environment variable which contains the file-name to
     load.
-    '''
-    return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
+    """
+    return f"{config_id.group.upper()}_{config_id.app.upper()}_FILENAME"
 
 
 def is_readable(
-        config_id: ConfigID,
-        filename: str,
-        version: Optional[Version] = None,
-        secure: bool = False,
-        handler: "Optional[Type[Handler[Any]]]" = None
+    config_id: ConfigID,
+    filename: str,
+    version: Optional[Version] = None,
+    secure: bool = False,
+    handler: "Optional[Type[Handler[Any]]]" = None,
 ) -> FileReadability:
     """
     Check if ``filename`` can be read. Will return boolean which is True if
@@ -417,11 +458,11 @@ def is_readable(
     handler_ = handler or IniHandler  # type: Type[Handler[Any]]
 
     if not exists(filename):
-        return FileReadability(False, filename, 'File not found', None)
-    log.debug('Checking if %s is readable.', filename)
+        return FileReadability(False, filename, "File not found", None)
+    log.debug("Checking if %s is readable.", filename)
 
     insecure_readable = True
-    unreadable_reason = '<unknown>'
+    unreadable_reason = "<unknown>"
 
     # Check if the file is version-compatible with this instance.
     try:
@@ -441,7 +482,8 @@ def is_readable(
         # version is set, so we MUST have a version in the file!
         raise NoVersionError(
             "The config option 'meta.version' is missing in {}. The "
-            "application expects version {}!".format(filename, version))
+            "application expects version {}!".format(filename, version)
+        )
 
     if version and instance_version:
         # The user expected a certain version. We need to check the version in
@@ -451,21 +493,13 @@ def is_readable(
         expected_major = version.major
         expected_minor = version.minor
         if expected_major != major:
-            msg = 'Invalid major version number in %r. Expected %r, got %r!'
-            log.error(
-                msg,
-                abspath(filename),
-                str(version),
-                instance_version)
+            msg = "Invalid major version number in %r. Expected %r, got %r!"
+            log.error(msg, abspath(filename), str(version), instance_version)
             insecure_readable = False
             unreadable_reason = msg
         elif expected_minor > minor:
-            msg = 'Mismatching minor version number in %r. Expected %r, got %r!'
-            log.warning(
-                msg,
-                abspath(filename),
-                str(version),
-                instance_version)
+            msg = "Mismatching minor version number in %r. Expected %r, got %r!"
+            log.warning(msg, abspath(filename), str(version), instance_version)
             insecure_readable = False
             unreadable_reason = msg
 
@@ -474,5 +508,6 @@ def is_readable(
             msg = "File %r is not secure enough. Change it's mode to 600"
             log.warning(msg, filename)
             return FileReadability(False, filename, msg, instance_version)
-    return FileReadability(insecure_readable, filename, unreadable_reason,
-                           instance_version)
+    return FileReadability(
+        insecure_readable, filename, unreadable_reason, instance_version
+    )

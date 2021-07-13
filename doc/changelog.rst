@@ -1,6 +1,17 @@
 Changelog
 =========
 
+Release 5.1.0
+-------------
+
+Support
+~~~~~~~
+
+* Improved type-hints for the result of ``get_config``
+* **Dropped Support for Python 3.5**
+
+
+
 Release 5.0.1-5.0.2
 -------------------
 
@@ -55,6 +66,16 @@ Upgrading from 4.x
 * Return types for INI files is now a standard library instance of
   :py:class:`configparser.ConfigParser`. This means that the ``default``
   keyword argument to ``get`` has been replaced with ``fallback``.
+
+
+Release 4.3.9
+-------------
+
+Fixed
+~~~~~
+
+* Blacklist setuptools 50.0.0 (See
+  https://github.com/pypa/setuptools/issues/2356)
 
 
 Release 4.3.8
