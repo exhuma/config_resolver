@@ -76,7 +76,7 @@ class CommonTests:
         expected = ['/etc/hello/world/%s' % self.TEST_FILENAME,
                     '/etc/xdg/hello/world/%s' % self.TEST_FILENAME,
                     expanduser('~/.config/hello/world/%s' % self.TEST_FILENAME),
-                    '{}/.hello/world/{}'.format(os.getcwd(), self.TEST_FILENAME)]
+                    f'{os.getcwd()}/.hello/world/{self.TEST_FILENAME}']
         self.assertEqual(
             result.meta.active_path,
             expected)
@@ -97,9 +97,9 @@ class CommonTests:
         with environment(HELLO_WORLD_PATH=path):
             result = get_config('world', 'hello',
                                 handler=self.HANDLER_CLASS)
-        expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                    '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                    '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)]
+        expected = [f'{self.DATA_PATH}/{self.APP_FILENAME}',
+                    f'{self.DATA_PATH}/a/{self.APP_FILENAME}',
+                    f'{self.DATA_PATH}/b/{self.APP_FILENAME}']
         self.assertEqual(
             result.meta.active_path,
             expected)
@@ -109,9 +109,9 @@ class CommonTests:
         result = get_config('world', 'hello',
                             lookup_options={'search_path': path},
                             handler=self.HANDLER_CLASS)
-        expected = ['%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                    '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                    '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)]
+        expected = [f'{self.DATA_PATH}/{self.APP_FILENAME}',
+                    f'{self.DATA_PATH}/a/{self.APP_FILENAME}',
+                    f'{self.DATA_PATH}/b/{self.APP_FILENAME}']
         self.assertEqual(
             result.meta.active_path,
             expected)
@@ -139,10 +139,10 @@ class CommonTests:
             '/etc/hello/world/%s' % self.APP_FILENAME,
             '/etc/xdg/hello/world/%s' % self.APP_FILENAME,
             expanduser('~/.config/hello/world/%s' % self.APP_FILENAME),
-            '%s/.hello/world/%s' % (os.getcwd(), self.APP_FILENAME),
-            '%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
-            '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
-            '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME)
+            f'{os.getcwd()}/.hello/world/{self.APP_FILENAME}',
+            f'{self.DATA_PATH}/{self.APP_FILENAME}',
+            f'{self.DATA_PATH}/a/{self.APP_FILENAME}',
+            f'{self.DATA_PATH}/b/{self.APP_FILENAME}'
         ]
         self.assertEqual(
             result.meta.active_path,
@@ -170,9 +170,9 @@ class CommonTests:
         self.assertEqual(
             result.meta.loaded_files,
             [
-                '%s/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                '%s/a/%s' % (self.DATA_PATH, self.APP_FILENAME),
-                '%s/b/%s' % (self.DATA_PATH, self.APP_FILENAME),
+                f'{self.DATA_PATH}/{self.APP_FILENAME}',
+                f'{self.DATA_PATH}/a/{self.APP_FILENAME}',
+                f'{self.DATA_PATH}/b/{self.APP_FILENAME}',
             ])
 
     def test_filename(self):
@@ -420,7 +420,7 @@ class CommonTests:
         self.catcher.assert_contains_regex(
             'config_resolver.foo.world',
             logging.WARNING,
-            '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
+            f'{self.DATA_PATH}/versioned/{self.APP_FILENAME}')
 
     def test_filename_in_log_major(self):
         """
@@ -435,7 +435,7 @@ class CommonTests:
         self.catcher.assert_contains_regex(
             'config_resolver.hello.world',
             logging.ERROR,
-            '%s/versioned/%s' % (self.DATA_PATH, self.APP_FILENAME))
+            f'{self.DATA_PATH}/versioned/{self.APP_FILENAME}')
 
     def test_prefix_filter_available(self):
         '''

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # config_resolver documentation build configuration file, created by
 # sphinx-quickstart on Sun Oct 27 10:10:41 2013.
@@ -47,8 +46,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'config_resolver'
-copyright = u'2013, Michel Albert'
+project = 'config_resolver'
+copyright = '2013, Michel Albert'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -188,8 +187,8 @@ htmlhelp_basename = 'config_resolverdoc'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('README', 'config_resolver', u'config_resolver Documentation',
-     [u'Michel Albert'], 1)
+    ('README', 'config_resolver', 'config_resolver Documentation',
+     ['Michel Albert'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -202,8 +201,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('README', 'config_resolver', u'config_resolver Documentation',
-   u'Michel Albert', 'config_resolver', 'One line description of project.',
+  ('README', 'config_resolver', 'config_resolver Documentation',
+   'Michel Albert', 'config_resolver', 'One line description of project.',
    'Miscellaneous'),
 ]
 

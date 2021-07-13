@@ -52,7 +52,7 @@ class TestableHandler(logging.Handler):
     """
 
     def __init__(self, *args, **kwargs):
-        super(TestableHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.records = []
 
     def emit(self, record):

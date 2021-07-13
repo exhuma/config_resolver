@@ -202,7 +202,7 @@ def get_config(
             filename,
             search_path_)
     elif not loaded_files and require_load:
-        raise IOError("No config file named %s found! Search path "
+        raise OSError("No config file named %s found! Search path "
                       "was %r" % (filename, search_path_))
 
     return LookupResult(output, LookupMetadata(
@@ -267,7 +267,7 @@ def get_xdg_dirs(config_id: ConfigID) -> List[str]:
         for path in reversed(config_dirs.split(':')):
             output.append(join(path, config_id.group, config_id.app))
         return output
-    return ['/etc/xdg/%s/%s' % (config_id.group, config_id.app)]
+    return [f'/etc/xdg/{config_id.group}/{config_id.app}']
 
 
 def get_xdg_home(config_id: ConfigID) -> str:
@@ -280,7 +280,7 @@ def get_xdg_home(config_id: ConfigID) -> str:
     if config_home:
         log.debug('XDG_CONFIG_HOME is set to %r', config_home)
         return expanduser(join(config_home, config_id.group, config_id.app))
-    return expanduser('~/.config/%s/%s' % (config_id.group, config_id.app))
+    return expanduser(f'~/.config/{config_id.group}/{config_id.app}')
 
 
 def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
@@ -320,17 +320,17 @@ def effective_path(config_id: ConfigID, search_path: str = '') -> List[str]:
     log, _ = prefixed_logger(config_id)
 
     # default search path
-    path = (['/etc/%s/%s' % (config_id.group, config_id.app)] +
+    path = ([f'/etc/{config_id.group}/{config_id.app}'] +
             get_xdg_dirs(config_id) +
             [get_xdg_home(config_id),
-             join(getcwd(), '.{}'.format(config_id.group), config_id.app)])
+             join(getcwd(), f'.{config_id.group}', config_id.app)])
 
     # If a path was passed directly to this instance, override the path.
     if search_path:
         path = search_path.split(pathsep)
 
     # Next, consider the environment variables...
-    env_path_name = "%s_%s_PATH" % (
+    env_path_name = "{}_{}_PATH".format(
         config_id.group.upper(), config_id.app.upper())
     env_path = getenv(env_path_name)
 
@@ -401,7 +401,7 @@ def env_name(config_id: ConfigID) -> str:
     Return the name of the environment variable which contains the file-name to
     load.
     '''
-    return "%s_%s_FILENAME" % (config_id.group.upper(), config_id.app.upper())
+    return f"{config_id.group.upper()}_{config_id.app.upper()}_FILENAME"
 
 
 def is_readable(
