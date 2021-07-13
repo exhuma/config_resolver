@@ -1,6 +1,17 @@
 Changelog
 =========
 
+Release 5.1.0
+-------------
+
+Support
+~~~~~~~
+
+* Improved type-hints for the result of ``get_config``
+* **Dropped Support for Python 3.5**
+
+
+
 Release 5.0.1-5.0.2
 -------------------
 
