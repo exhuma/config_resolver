@@ -1,6 +1,6 @@
-'''
+"""
 Handler for INI files
-'''
+"""
 
 from configparser import ConfigParser
 from typing import Optional
@@ -14,7 +14,8 @@ class IniHandler(Handler[ConfigParser]):
     """
     A config-resolver handler capable of reading ".ini" files.
     """
-    DEFAULT_FILENAME = 'app.ini'
+
+    DEFAULT_FILENAME = "app.ini"
 
     @staticmethod
     def empty() -> ConfigParser:
@@ -35,10 +36,11 @@ class IniHandler(Handler[ConfigParser]):
 
     @staticmethod
     def get_version(config: ConfigParser) -> Optional[Version]:
-        if (not config.has_section('meta') or
-                not config.has_option('meta', 'version')):
+        if not config.has_section("meta") or not config.has_option(
+            "meta", "version"
+        ):
             return None
-        raw_value = config.get('meta', 'version')
+        raw_value = config.get("meta", "version")
         parsed = Version(raw_value)
         return parsed
 
