@@ -1,6 +1,6 @@
-'''
+"""
 Handler for JSON files
-'''
+"""
 
 from json import load, loads
 from typing import Any, Dict, Optional
@@ -16,7 +16,8 @@ class JsonHandler(Handler[TJsonConfig]):
     """
     A config-resolver handler capable of reading ".json" files.
     """
-    DEFAULT_FILENAME = 'app.json'
+
+    DEFAULT_FILENAME = "app.json"
 
     @staticmethod
     def empty() -> TJsonConfig:
@@ -34,9 +35,9 @@ class JsonHandler(Handler[TJsonConfig]):
 
     @staticmethod
     def get_version(config: TJsonConfig) -> Optional[Version]:
-        if 'meta' not in config or 'version' not in config['meta']:
+        if "meta" not in config or "version" not in config["meta"]:
             return None
-        raw_value = config['meta']['version']
+        raw_value = config["meta"]["version"]
         parsed = Version(raw_value)
         return parsed
 
