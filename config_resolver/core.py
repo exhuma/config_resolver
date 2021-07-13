@@ -4,13 +4,12 @@ Core functionality of :py:mod:`config_resolver`
 
 import logging
 import stat
-from collections import namedtuple
 from functools import lru_cache
 from logging import Filter, Logger
 from os import getcwd, getenv, pathsep
 from os import stat as get_stat
 from os.path import abspath, exists, expanduser, join
-from typing import Any, Dict, Generator, List, Optional, Tuple, Type, cast
+from typing import Any, Dict, Generator, List, NamedTuple, Optional, Tuple, Type, cast
 
 from packaging.version import Version
 
@@ -20,16 +19,24 @@ from .exc import NoVersionError
 from .handler.base import Handler
 from .util import PrefixFilter
 
-ConfigID = namedtuple('ConfigID', 'group app')
-LookupResult = namedtuple('LookupResult', 'config meta')
-LookupMetadata = namedtuple('LookupMetadata', [
-    'active_path',
-    'loaded_files',
-    'config_id',
-    'prefix_filter'
-])
-FileReadability = namedtuple(
-    'FileReadability', 'is_readable filename reason version')
+class ConfigID(NamedTuple):
+    group: str
+    app: str
+
+class LookupMetadata(NamedTuple):
+    active_path: List[str]
+    loaded_files: List[str]
+    config_id: ConfigID
+    prefix_filter: Optional[Filter]
+class LookupResult(NamedTuple):
+    config: Any
+    meta: LookupMetadata
+
+class FileReadability(NamedTuple):
+    is_readable: bool
+    filename: str
+    reason: str
+    version: Optional[Version]
 
 
 def from_string(
@@ -44,8 +51,8 @@ def from_string(
     # TODO: This still does not do any version checking!
     new_config = handler_.from_string(data)
     return LookupResult(new_config, LookupMetadata(
-        '<unknown>',
-        '<unknown>',
+        ['<unknown>'],
+        ['<unknown>'],
         ConfigID('<unknown>', '<unknown>'),
         None
     ))
@@ -132,7 +139,7 @@ def get_config(
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
     """
-    concrete_handler = handler or IniHandler  # type: Type[Handler[Any]]
+    concrete_handler: Type[Handler[Any]] = handler or IniHandler 
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
 
@@ -256,7 +263,7 @@ def get_xdg_dirs(config_id: ConfigID) -> List[str]:
     config_dirs = getenv('XDG_CONFIG_DIRS', '')
     if config_dirs:
         log.debug('XDG_CONFIG_DIRS is set to %r', config_dirs)
-        output = []
+        output: List[str] = []
         for path in reversed(config_dirs.split(':')):
             output.append(join(path, config_id.group, config_id.app))
         return output
