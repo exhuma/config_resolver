@@ -37,6 +37,21 @@ include = ["config_resolver*"]
 [tool.setuptools.package-data]
 config_resolver = ["py.typed"]
 
+[dependency-groups]
+dev = [
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.uv.dependency-groups]
+# Current dev tooling no longer supports the package's Python floor. This
+# only restricts the development environment, not the published package.
+dev = { requires-python = ">=3.10" }
+
 [tool.black]
 line_length = 80
 
