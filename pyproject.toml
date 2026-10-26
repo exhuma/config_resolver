@@ -1,3 +1,57 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "config_resolver"
+dynamic = ["version"]
+description = "A small package to automatically find a configuration file."
+readme = "README.rst"
+authors = [{ name = "Michel Albert", email = "michel@albert.lu" }]
+license = { text = "MIT" }
+requires-python = ">=3.6"
+dependencies = ["packaging"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/exhuma/config_resolver"
+"Bug Tracker" = "https://github.com/exhuma/config_resolver/issues"
+Documentation = "https://config-resolver.readthedocs.org/en/latest/"
+
+[tool.setuptools.dynamic]
+version = { file = "config_resolver/version.txt" }
+
+[tool.setuptools.packages.find]
+include = ["config_resolver*"]
+
+[tool.setuptools.package-data]
+config_resolver = ["py.typed"]
+
+[dependency-groups]
+dev = [
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.uv.dependency-groups]
+# Current dev tooling no longer supports the package's Python floor. This
+# only restricts the development environment, not the published package.
+dev = { requires-python = ">=3.10" }
+
 [tool.black]
 line_length = 80
 
