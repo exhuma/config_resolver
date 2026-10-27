@@ -68,7 +68,7 @@ def test_warning_links_to_documentation():
     """
     with pytest.warns(
         ConfigResolverDeprecationWarning,
-        match=r"https://config-resolver\.readthedocs\.io/",
+        match=r"https://exhuma\.github\.io/config_resolver/migration\.html",
     ):
         from_string("")
 

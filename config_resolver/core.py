@@ -50,8 +50,8 @@ class LookupResult(NamedTuple):
 
 DEPRECATION_MESSAGE = (
     "config_resolver is no longer maintained and will receive no further "
-    "releases. See https://config-resolver.readthedocs.io/ for migration "
-    "examples."
+    "releases. See https://exhuma.github.io/config_resolver/migration.html "
+    "for migration examples."
 )
 
 

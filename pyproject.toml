@@ -34,8 +34,8 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://config-resolver.readthedocs.io/en/stable/"
-Changelog = "https://config-resolver.readthedocs.io/en/stable/changelog.html"
+Documentation = "https://exhuma.github.io/config_resolver/"
+Changelog = "https://exhuma.github.io/config_resolver/changelog.html"
 Issues = "https://github.com/exhuma/config_resolver/issues"
 Repository = "https://github.com/exhuma/config_resolver"
 

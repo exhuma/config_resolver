@@ -4,7 +4,7 @@ Release 5.2.0
 This is the final release: ``config_resolver`` is no longer maintained
 and will receive no further bug fixes or security updates.
 Move to one of the replacements in "Alternatives and migration"
-(https://config-resolver.readthedocs.io/en/stable/migration.html).
+(https://exhuma.github.io/config_resolver/migration.html).
 Apart from the new warning, the library behaves as in 5.1.0.
 
 Deprecated
@@ -29,8 +29,9 @@ Documentation
 
 * Add "Alternatives and migration", with a tested replacement for each
   common use case.
-* Publish the current release as "stable" on Read the Docs again; it
-  still showed 5.0.0a1.
+* Move the documentation to GitHub Pages:
+  https://exhuma.github.io/config_resolver/
+  The Read the Docs site is no longer updated.
 
 
 Release 5.1.0

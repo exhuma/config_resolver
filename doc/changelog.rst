@@ -34,8 +34,9 @@ Documentation
 
 * Add :doc:`migration`, with a tested replacement for each
   common use case.
-* Publish the current release as "stable" on Read the Docs again; it
-  still showed 5.0.0a1.
+* Move the documentation to GitHub Pages:
+  https://exhuma.github.io/config_resolver/
+  The Read the Docs site is no longer updated.
 
 
 Release 5.1.0

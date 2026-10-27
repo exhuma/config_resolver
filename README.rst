@@ -17,12 +17,12 @@ config_resolver
    and the XDG lookup fits into a short function.
 
    `Alternatives and migration
-   <https://config-resolver.readthedocs.io/en/stable/migration.html>`_
+   <https://exhuma.github.io/config_resolver/migration.html>`_
    shows tested replacements for each use case.
 
 
 Full Documentation
-    https://config-resolver.readthedocs.org/en/latest/
+    https://exhuma.github.io/config_resolver/
 
 Repository
     https://github.com/exhuma/config_resolver
