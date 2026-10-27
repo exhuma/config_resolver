@@ -196,17 +196,34 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [test, build]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: [test, docs, build]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
+      - uses: actions/checkout@v7
+
+      # The version is dynamic (read from version.txt by setuptools), so
+      # `uv version` cannot report it; read the same file instead.
+      - name: Check that the tag matches the package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(cat config_resolver/version.txt)"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Tag $TAG does not match version.txt $version"
+            exit 1
+          fi
+
       - name: Download the built packages
         uses: actions/download-artifact@v8
         with:
           name: Packages
           path: dist
 
+      # Trusted Publishing (OIDC); also uploads PEP 740 attestations.
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_token }}
