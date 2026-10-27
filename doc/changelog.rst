@@ -1,6 +1,44 @@
 Changelog
 =========
 
+Release 5.2.0
+-------------
+
+This is the final release: ``config_resolver`` is no longer maintained
+and will receive no further bug fixes or security updates.
+Move to one of the replacements in :doc:`migration`.
+Apart from the new warning, the library behaves as in 5.1.0.
+
+Deprecated
+~~~~~~~~~~
+
+* Warn on every call to
+  :py:func:`~config_resolver.core.get_config` and
+  :py:func:`~config_resolver.core.from_string`: both now emit
+  :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`,
+  a subclass of ``DeprecationWarning``.
+  Importing the package does not warn.
+  Projects that run with ``-W error`` (or pytest's
+  ``filterwarnings = error``) now fail on these calls; filter the
+  warning while migrating.
+
+Fixed
+~~~~~
+
+* Show the correct license on PyPI. The package has been MIT
+  licensed all along (see ``LICENSE.txt``), but its classifier said
+  LGPLv3.
+
+Documentation
+~~~~~~~~~~~~~
+
+* Add :doc:`migration`, with a tested replacement for each
+  common use case.
+* Move the documentation to GitHub Pages:
+  https://exhuma.github.io/config_resolver/
+  The Read the Docs site is no longer updated.
+
+
 Release 5.1.0
 -------------
 
@@ -41,7 +79,7 @@ Release 5.0.0
   :py:class:`configparser.ConfigParser` class. Instead, it will return whatever
   the supplied handler creates.
 * External API changed to a functional API. You no longer call the ``Config``
-  constructor, but instead use the :py:func:`~config_resolver.get_config()`
+  constructor, but instead use the :py:func:`~config_resolver.core.get_config`
   function. See the API docs for the changes in function signature.
 * Retrieval meta-data is returned along-side the retrieved config. This
   separation allows a custom handler to return any type without impacting the

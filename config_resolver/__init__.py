@@ -22,15 +22,15 @@ process. See :py:func:`~config_resolver.core.get_config` for details.
 
 ``config_resolver`` comes with support for ``.json`` and ``.ini`` files out
 of the box. It is possible to create your own handlers for other file types
-by subclassing :py:class:`config_resolver.handler.Handler` and passing it to
-:py:func:`~config_resolver.core.get_config`
+by subclassing :py:class:`config_resolver.handler.base.Handler` and passing it
+to :py:func:`~config_resolver.core.get_config`
 """
 # pylint: disable=unused-import
 
 from os.path import dirname, join
 
 from .core import from_string, get_config
-from .exc import NoVersionError
+from .exc import ConfigResolverDeprecationWarning, NoVersionError
 
 with open(join(dirname(__file__), "version.txt")) as fptr:
     __version__ = fptr.read().strip()

@@ -7,6 +7,7 @@ Table of Contents
 .. toctree::
    :maxdepth: 1
 
+   migration
    intro
    changelog
    handlers

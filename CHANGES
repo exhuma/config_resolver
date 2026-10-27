@@ -1,3 +1,39 @@
+Release 5.2.0
+-------------
+
+This is the final release: ``config_resolver`` is no longer maintained
+and will receive no further bug fixes or security updates.
+Move to one of the replacements in "Alternatives and migration"
+(https://exhuma.github.io/config_resolver/migration.html).
+Apart from the new warning, the library behaves as in 5.1.0.
+
+Deprecated
+~~~~~~~~~~
+
+* Warn on every call to ``get_config()`` and ``from_string()``:
+  both now emit ``ConfigResolverDeprecationWarning``, a subclass of
+  ``DeprecationWarning``. Importing the package does not warn.
+  Projects that run with ``-W error`` (or pytest's
+  ``filterwarnings = error``) now fail on these calls; filter the
+  warning while migrating.
+
+Fixed
+~~~~~
+
+* Show the correct license on PyPI. The package has been MIT
+  licensed all along (see ``LICENSE.txt``), but its classifier said
+  LGPLv3.
+
+Documentation
+~~~~~~~~~~~~~
+
+* Add "Alternatives and migration", with a tested replacement for each
+  common use case.
+* Move the documentation to GitHub Pages:
+  https://exhuma.github.io/config_resolver/
+  The Read the Docs site is no longer updated.
+
+
 Release 5.1.0
 -------------
 

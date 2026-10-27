@@ -4,6 +4,7 @@ Core functionality of :py:mod:`config_resolver`
 
 import logging
 import stat
+import warnings
 from functools import lru_cache
 from logging import Filter, Logger
 from os import getcwd, getenv, pathsep
@@ -25,7 +26,7 @@ from packaging.version import Version
 
 from config_resolver.handler.ini import IniHandler
 
-from .exc import NoVersionError
+from .exc import ConfigResolverDeprecationWarning, NoVersionError
 from .handler.base import Handler
 from .util import PrefixFilter
 
@@ -47,6 +48,13 @@ class LookupResult(NamedTuple):
     meta: LookupMetadata
 
 
+DEPRECATION_MESSAGE = (
+    "config_resolver is no longer maintained and will receive no further "
+    "releases. See https://exhuma.github.io/config_resolver/migration.html "
+    "for migration examples."
+)
+
+
 class FileReadability(NamedTuple):
     is_readable: bool
     filename: str
@@ -60,7 +68,11 @@ def from_string(
     """
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
+
+    Every call emits a
+    :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`.
     """
+    _warn_unmaintained()
     handler_ = handler or IniHandler
     # TODO: This still does not do any version checking!
     new_config = handler_.from_string(data)
@@ -105,7 +117,7 @@ def get_config(
     The *handler* may be a class which is responsible for loading the config
     file. *config_resolver* uses a ".ini" file handler by default and comes
     bundled with a JSON handler as well. They can be found in the
-    :py:module:`config_resolver.handler` package.
+    :py:mod:`config_resolver.handler` package.
 
     .. note::
 
@@ -119,24 +131,24 @@ def get_config(
 
     *lookup_options* is a dictionary with the following optional keys:
 
-    **filename** (default=``''``)
+    **filename** (default: ``''``)
         This can be used to override the default filename of the selected
         handler. If left empty, the handler will be responsible for the
         filename.
 
-    **search_path** (default=``[]``)
+    **search_path** (default: ``[]``)
         A list of folders that should be searched for config files. The order
         here is relevant. The folders will be searched in order, and each file
         which is found will be loaded by the *handler*. Note that the search
         path should not include *group_name* or *app_name* as they will be
         appended automatically.
 
-    **require_load** (default=``False``)
+    **require_load** (default: ``False``)
         A boolean value which determines what happens if *no* file was loaded.
         If this is set to ``True`` the call to ``get_config`` will raise an
         exception if no file was found. Otherwise it will log a debug message.
 
-    **version** (default=``None``)
+    **version** (default: ``None``)
         This can be a string in the form ``<major>.<minor>``. If specified, the
         lookup process will request a version number from the *handler* for each
         file found. The version in the file will be compared with this value. If
@@ -151,11 +163,15 @@ def get_config(
         How the version has to be stored in the config file depends on the
         handler.
 
-    **secure** (default=``False``)
+    **secure** (default: ``False``)
         If set to ``True``, files which are world-readable will be ignored.
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
+
+    Every call emits a
+    :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`.
     """
+    _warn_unmaintained()
     concrete_handler: Type[Handler[Any]] = handler or IniHandler
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
@@ -233,6 +249,16 @@ def get_config(
     return LookupResult(
         output,
         LookupMetadata(active_path, loaded_files, config_id, prefix_filter),
+    )
+
+
+def _warn_unmaintained() -> None:
+    """
+    Emit the deprecation warning, attributed to the line that called the
+    public function (two frames up from here).
+    """
+    warnings.warn(
+        DEPRECATION_MESSAGE, ConfigResolverDeprecationWarning, stacklevel=3
     )
 
 
