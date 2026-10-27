@@ -1,6 +1,43 @@
 Changelog
 =========
 
+Release 5.2.0
+-------------
+
+This is the final release: ``config_resolver`` is no longer maintained
+and will receive no further bug fixes or security updates.
+Move to one of the replacements in :doc:`migration`.
+Apart from the new warning, the library behaves as in 5.1.0.
+
+Deprecated
+~~~~~~~~~~
+
+* Warn on every call to
+  :py:func:`~config_resolver.core.get_config` and
+  :py:func:`~config_resolver.core.from_string`: both now emit
+  :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`,
+  a subclass of ``DeprecationWarning``.
+  Importing the package does not warn.
+  Projects that run with ``-W error`` (or pytest's
+  ``filterwarnings = error``) now fail on these calls; filter the
+  warning while migrating.
+
+Fixed
+~~~~~
+
+* Show the correct license on PyPI. The package has been MIT
+  licensed all along (see ``LICENSE.txt``), but its classifier said
+  LGPLv3.
+
+Documentation
+~~~~~~~~~~~~~
+
+* Add :doc:`migration`, with a tested replacement for each
+  common use case.
+* Publish the current release as "stable" on Read the Docs again; it
+  still showed 5.0.0a1.
+
+
 Release 5.1.0
 -------------
 
