@@ -1,6 +1,25 @@
 config_resolver
 ===============
 
+.. warning::
+
+   **config_resolver is no longer maintained.**
+   Version 5.2.0 is the final release:
+   there will be no further bug fixes or security updates.
+
+   It cannot override single values from environment variables,
+   returns every value as an untyped string,
+   returns an empty config instead of an error when no file is found,
+   and reads only INI and JSON.
+   Its ``secure`` option rejects the group- or world-readable secret
+   files that Docker and Kubernetes mount.
+   Maintained libraries cover all of this,
+   and the XDG lookup fits into a short function.
+
+   `Alternatives and migration
+   <https://config-resolver.readthedocs.io/en/stable/migration.html>`_
+   shows tested replacements for each use case.
+
 
 Full Documentation
     https://config-resolver.readthedocs.org/en/latest/

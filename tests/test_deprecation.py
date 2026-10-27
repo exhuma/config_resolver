@@ -5,6 +5,7 @@ Tests for the end-of-life deprecation warning.
 import inspect
 import subprocess
 import sys
+import warnings
 
 import pytest
 
@@ -99,3 +100,17 @@ def test_import_does_not_warn():
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_documented_filter_silences_warning():
+    """
+    Ensure the filter shown in doc/migration.rst silences the warning.
+    """
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        warnings.filterwarnings(
+            "ignore",
+            category=ConfigResolverDeprecationWarning,
+        )
+        from_string("")
+    assert record == []
