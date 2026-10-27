@@ -117,7 +117,7 @@ def get_config(
     The *handler* may be a class which is responsible for loading the config
     file. *config_resolver* uses a ".ini" file handler by default and comes
     bundled with a JSON handler as well. They can be found in the
-    :py:module:`config_resolver.handler` package.
+    :py:mod:`config_resolver.handler` package.
 
     .. note::
 
@@ -131,24 +131,24 @@ def get_config(
 
     *lookup_options* is a dictionary with the following optional keys:
 
-    **filename** (default=``''``)
+    **filename** (default: ``''``)
         This can be used to override the default filename of the selected
         handler. If left empty, the handler will be responsible for the
         filename.
 
-    **search_path** (default=``[]``)
+    **search_path** (default: ``[]``)
         A list of folders that should be searched for config files. The order
         here is relevant. The folders will be searched in order, and each file
         which is found will be loaded by the *handler*. Note that the search
         path should not include *group_name* or *app_name* as they will be
         appended automatically.
 
-    **require_load** (default=``False``)
+    **require_load** (default: ``False``)
         A boolean value which determines what happens if *no* file was loaded.
         If this is set to ``True`` the call to ``get_config`` will raise an
         exception if no file was found. Otherwise it will log a debug message.
 
-    **version** (default=``None``)
+    **version** (default: ``None``)
         This can be a string in the form ``<major>.<minor>``. If specified, the
         lookup process will request a version number from the *handler* for each
         file found. The version in the file will be compared with this value. If
@@ -163,7 +163,7 @@ def get_config(
         How the version has to be stored in the config file depends on the
         handler.
 
-    **secure** (default=``False``)
+    **secure** (default: ``False``)
         If set to ``True``, files which are world-readable will be ignored.
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.

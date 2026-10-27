@@ -41,7 +41,7 @@ Release 5.0.0
   :py:class:`configparser.ConfigParser` class. Instead, it will return whatever
   the supplied handler creates.
 * External API changed to a functional API. You no longer call the ``Config``
-  constructor, but instead use the :py:func:`~config_resolver.get_config()`
+  constructor, but instead use the :py:func:`~config_resolver.core.get_config`
   function. See the API docs for the changes in function signature.
 * Retrieval meta-data is returned along-side the retrieved config. This
   separation allows a custom handler to return any type without impacting the

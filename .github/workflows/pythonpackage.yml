@@ -158,6 +158,22 @@ jobs:
           chmod 600 tests/examples/configs/secure.ini
           uv run pytest -rsf
 
+  docs:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+
+      # Same strictness as Read the Docs (fail_on_warning), plus -n so
+      # dead cross-references fail too.
+      - name: Build with Sphinx
+        run: >-
+          uv run --locked --group docs
+          sphinx-build -n -W --keep-going -b html doc doc/_build/html
+
   build:
     name: Build and inspect package
     runs-on: ubuntu-latest
