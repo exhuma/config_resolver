@@ -22,8 +22,8 @@ process. See :py:func:`~config_resolver.core.get_config` for details.
 
 ``config_resolver`` comes with support for ``.json`` and ``.ini`` files out
 of the box. It is possible to create your own handlers for other file types
-by subclassing :py:class:`config_resolver.handler.base.Handler` and passing it to
-:py:func:`~config_resolver.core.get_config`
+by subclassing :py:class:`config_resolver.handler.base.Handler` and passing it
+to :py:func:`~config_resolver.core.get_config`
 """
 # pylint: disable=unused-import
 
