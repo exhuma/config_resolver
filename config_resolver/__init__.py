@@ -30,7 +30,7 @@ by subclassing :py:class:`config_resolver.handler.Handler` and passing it to
 from os.path import dirname, join
 
 from .core import from_string, get_config
-from .exc import NoVersionError
+from .exc import ConfigResolverDeprecationWarning, NoVersionError
 
 with open(join(dirname(__file__), "version.txt")) as fptr:
     __version__ = fptr.read().strip()

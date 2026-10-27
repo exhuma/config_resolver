@@ -4,6 +4,7 @@ Core functionality of :py:mod:`config_resolver`
 
 import logging
 import stat
+import warnings
 from functools import lru_cache
 from logging import Filter, Logger
 from os import getcwd, getenv, pathsep
@@ -25,7 +26,7 @@ from packaging.version import Version
 
 from config_resolver.handler.ini import IniHandler
 
-from .exc import NoVersionError
+from .exc import ConfigResolverDeprecationWarning, NoVersionError
 from .handler.base import Handler
 from .util import PrefixFilter
 
@@ -47,6 +48,13 @@ class LookupResult(NamedTuple):
     meta: LookupMetadata
 
 
+DEPRECATION_MESSAGE = (
+    "config_resolver is no longer maintained and will receive no further "
+    "releases. See https://config-resolver.readthedocs.io/ for migration "
+    "examples."
+)
+
+
 class FileReadability(NamedTuple):
     is_readable: bool
     filename: str
@@ -60,7 +68,11 @@ def from_string(
     """
     Load a config from the string value in *data*. *handler* can be used to
     specify a custom parser/handler.
+
+    Every call emits a
+    :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`.
     """
+    _warn_unmaintained()
     handler_ = handler or IniHandler
     # TODO: This still does not do any version checking!
     new_config = handler_.from_string(data)
@@ -155,7 +167,11 @@ def get_config(
         If set to ``True``, files which are world-readable will be ignored.
         This forces you to have secure file-access rights because the file will
         be skipped if the rights are too open.
+
+    Every call emits a
+    :py:class:`~config_resolver.exc.ConfigResolverDeprecationWarning`.
     """
+    _warn_unmaintained()
     concrete_handler: Type[Handler[Any]] = handler or IniHandler
     config_id = ConfigID(group_name, app_name)
     log, prefix_filter = prefixed_logger(config_id)
@@ -233,6 +249,16 @@ def get_config(
     return LookupResult(
         output,
         LookupMetadata(active_path, loaded_files, config_id, prefix_filter),
+    )
+
+
+def _warn_unmaintained() -> None:
+    """
+    Emit the deprecation warning, attributed to the line that called the
+    public function (two frames up from here).
+    """
+    warnings.warn(
+        DEPRECATION_MESSAGE, ConfigResolverDeprecationWarning, stacklevel=3
     )
 
 
